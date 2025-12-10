@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>外包商工程工數與吊車統計系統</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React 18 -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
+
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      table { font-size: 14px; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-4">
+  <div id="root"></div>
+
+  <script type="text/babel">
+
+/* ---------------------------------------------------
+   LocalStorage Helper
+--------------------------------------------------- */
+const loadData = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+const saveData = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+/* ---------------------------------------------------
+   App Component
+--------------------------------------------------- */
+function App() {
+
+  /* ---------------- 工程管理 ---------------- */
+  const [projects, setProjects] = React.useState(loadData("projects", []));
+  const [currentProjectId, setCurrentProjectId] = React.useState(loadData("currentProjectId", ""));
+  const [newProject, setNewProject] = React.useState({ number: "", name: "" });
+
+  /* ---------------- 外包商管理 ---------------- */
+  const [vendors, setVendors] = React.useState(loadData("vendors", ["紘展"]));
+  const [currentVendor, setCurrentVendor] = React.useState(loadData("currentVendor", "紘展"));
+  const [newVendorName, setNewVendorName] = React.useState("");
+
+  /* ---------------- 工數 + 吊車紀錄 ---------------- */
+  const [records, setRecords] = React.useState(loadData("records", []));
+
+  /* ---------------- Modal 控制 ---------------- */
+  const [showLaborModal, setShowLaborModal] = React.useState(false);
+  const [showCraneModal, setShowCraneModal] = React.useState(false);
+
+  /* ---------------- 編輯紀錄 ---------------- */
+  const [editRecord, setEditRecord] = React.useState(null);
+
+  /* ---------------- 表單 State ---------------- */
+  const [laborForm, setLaborForm] = React.useState({
+    date: "", labor: "", support: "", note: "",
+  });
+
+  const [craneForm, setCraneForm] = React.useState({
+    date: "", spec: "", hr: "", note: "",
+  });
+
+  /* ---------------- Auto-save ---------------- */
+  React.useEffect(() => saveData("projects", projects), [projects]);
+  React.useEffect(() => saveData("currentProjectId", currentProjectId), [currentProjectId]);
+  React.useEffect(() => saveData("vendors", vendors), [vendors]);
+  React.useEffect(() => saveData("currentVendor", currentVendor), [currentVendor]);
+  React.useEffect(() => saveData("records", records), [records]);
+
+  /* ---------------------------------------------------
+      新增工程
+  --------------------------------------------------- */
+  const addProject = () => {
+    if (!newProject.number || !newProject.name) return;
+    const newId = Date.now().toString();
+    const newList = [...projects, { id: newId, ...newProject }];
+    setProjects(newList);
+    setCurrentProjectId(newId);
+    setNewProject({ number: "", name: "" });
+  };
+
+  /* ---------------------------------------------------
+      新增外包商
+  --------------------------------------------------- */
+  const addVendor = () => {
+    if (!newVendorName.trim()) return;
+    if (vendors.includes(newVendorName)) return;
+    const newList = [...vendors, newVendorName];
+    setVendors(newList);
+    setCurrentVendor(newVendorName);
+    setNewVendorName("");
+  };
+
+  /* ---------------------------------------------------
+      新增工數紀錄
+  --------------------------------------------------- */
+  const addLaborRecord = () => {
+    if (!laborForm.date) return;
+
+    const newRecord = {
+      id: Date.now(),
+      type: "labor",
+      vendor: currentVendor,
+      projectId: currentProjectId,
+      date: laborForm.date,
+      labor: parseFloat(laborForm.labor || 0),
+      support: parseFloat(laborForm.support || 0),
+      spec: "",
+      hr: 0,
+      day: 0,
+      note: laborForm.note || "",
+    };
+
+    setRecords([...records, newRecord]);
+    setShowLaborModal(false);
+    setLaborForm({ date: "", labor: "", support: "", note: "" });
+  };
+
+  /* ---------------------------------------------------
+      新增吊車紀錄
+  --------------------------------------------------- */
+  const addCraneRecord = () => {
+    if (!craneForm.date || !craneForm.spec || !craneForm.hr) return;
+
+    const hr = parseFloat(craneForm.hr);
+    const day = parseFloat((hr / 8).toFixed(1)); // 保留 1 位小數
+
+    const newRecord = {
+      id: Date.now(),
+      type: "crane",
+      vendor: currentVendor,
+      projectId: currentProjectId,
+      date: craneForm.date,
+      labor: 0,
+      support: 0,
+      spec: craneForm.spec,
+      hr,
+      day,
+      note: craneForm.note || "",
+    };
+
+    setRecords([...records, newRecord]);
+    setShowCraneModal(false);
+    setCraneForm({ date: "", spec: "", hr: "", note: "" });
+  };
+
+  /* ---------------------------------------------------
+      編輯紀錄
+  --------------------------------------------------- */
+  const startEditRecord = (record) => setEditRecord(record);
+
+  const deleteRecord = (id) => {
+    setRecords(records.filter(r => r.id !== id));
+  };
+
+  /* ---------------------------------------------------
+      篩選目前工程 + 外包商的紀錄
+  --------------------------------------------------- */
+  const projectRecords = records.filter(r =>
+    r.projectId === currentProjectId && r.vendor === currentVendor
+  );
+
+  projectRecords.sort((a, b) => {
+    if (a.date === b.date) return a.id - b.id;
+    return a.date.localeCompare(b.date);
+  });
+
+  /* ---------------------------------------------------
+      統計
+  --------------------------------------------------- */
+  const totalLabor = projectRecords.filter(r => r.type === "labor")
+    .reduce((sum, r) => sum + r.labor, 0);
+
+  const totalSupport = projectRecords.filter(r => r.type === "labor")
+    .reduce((sum, r) => sum + r.support, 0);
+
+  const totalLaborSum = totalLabor + totalSupport;
+
+  const craneStats = {};
+  projectRecords.filter(r => r.type === "crane").forEach(r => {
+    if (!craneStats[r.spec]) craneStats[r.spec] = 0;
+    craneStats[r.spec] += r.day;
+  });
+
+  /* ---------------------------------------------------
+      清單標題
+  --------------------------------------------------- */
+  const currentProject = projects.find(p => p.id === currentProjectId);
+  const titleText = currentProject
+    ? `${currentVendor} - ${currentProject.number} ${currentProject.name} 統計表`
+    : "尚未選擇工程";
+
+  /* ---------------------------------------------------
+      匯出 EXCEL
+  --------------------------------------------------- */
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const sheetData = [
+      [titleText],
+      ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
+    ];
+
+    projectRecords.forEach(r => {
+      sheetData.push([
+        r.type === "labor" ? "工數" : "吊車",
+        r.date,
+        r.vendor,
+        r.labor || "",
+        r.support || "",
+        r.spec || "",
+        r.type === "crane" ? r.day.toFixed(1) : "",
+        r.note || "",
+      ]);
+    });
+
+    sheetData.push([]);
+    sheetData.push(["外包工總計", totalLabor]);
+    sheetData.push(["支援工總計", totalSupport]);
+    sheetData.push(["工數合計", totalLaborSum]);
+
+    sheetData.push([]);
+    sheetData.push(["吊車統計"]);
+    Object.entries(craneStats).forEach(([spec, day]) => {
+      sheetData.push([`${spec}`, `${day.toFixed(1)} 天`]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, "統計表");
+
+    XLSX.writeFile(wb, `${titleText}.xlsx`);
+  };
+
+  /* ---------------------------------------------------
+      主畫面 UI
+  --------------------------------------------------- */
+  return (
+    <div className="max-w-full">
+
+      <h1 className="text-2xl font-bold mb-4">{titleText}</h1>
+
+      {/* 工程管理 */}
+      <div className="bg-white p-4 rounded shadow mb-4 no-print">
+        <h2 className="font-semibold mb-2">工程管理</h2>
+
+        <div className="flex gap-4 items-center mb-2">
+          <select
+            className="border p-2 rounded"
+            value={currentProjectId}
+            onChange={e => setCurrentProjectId(e.target.value)}
+          >
+            <option value="">請選擇工程</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.number} - {p.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+            onClick={() => document.getElementById("newProject").showModal()}
+          >
+            新增工程
+          </button>
+        </div>
+      </div>
+
+      {/* 外包商管理 */}
+      <div className="bg-white p-4 rounded shadow mb-4 no-print">
+        <h2 className="font-semibold mb-2">外包商管理</h2>
+
+        <div className="flex gap-4 items-center mb-2">
+          <select
+            className="border p-2 rounded"
+            value={currentVendor}
+            onChange={e => setCurrentVendor(e.target.value)}
+          >
+            {vendors.map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded"
+            onClick={() => document.getElementById("newVendor").showModal()}
+          >
+            新增外包商
+          </button>
+        </div>
+      </div>
+
+      {/* 操作按鈕 */}
+      <div className="flex gap-4 mb-4 no-print">
+        <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => setShowLaborModal(true)}>
+          新增工數
+        </button>
+
+        <button className="bg-yellow-500 text-white px-4 py-2 rounded" onClick={() => setShowCraneModal(true)}>
+          新增吊車
+        </button>
+
+        <button className="bg-gray-700 text-white px-4 py-2 rounded" onClick={() => window.print()}>
+          列印
+        </button>
+
+        <button className="bg-purple-600 text-white px-4 py-2 rounded" onClick={exportExcel}>
+          匯出 Excel
+        </button>
+      </div>
+
+      {/* 合併清單 */}
+      <div className="overflow-x-auto bg-white rounded shadow">
+        <table className="w-full border">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="border px-2 py-1">類型</th>
+              <th className="border px-2 py-1">日期</th>
+              <th className="border px-2 py-1">外包商</th>
+              <th className="border px-2 py-1">外包工</th>
+              <th className="border px-2 py-1">支援工</th>
+              <th className="border px-2 py-1">吊車規格</th>
+              <th className="border px-2 py-1">天</th>
+              <th className="border px-2 py-1">備註</th>
+              <th className="border px-2 py-1 no-print">操作</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {projectRecords.map(r => (
+              <tr key={r.id}>
+                <td className="border px-2 py-1">{r.type === "labor" ? "工數" : "吊車"}</td>
+                <td className="border px-2 py-1">{r.date}</td>
+                <td className="border px-2 py-1">{r.vendor}</td>
+                <td className="border px-2 py-1">{r.labor || ""}</td>
+                <td className="border px-2 py-1">{r.support || ""}</td>
+                <td className="border px-2 py-1">{r.spec || ""}</td>
+                <td className="border px-2 py-1">{r.type === "crane" ? r.day.toFixed(1) : ""}</td>
+                <td className="border px-2 py-1">{r.note}</td>
+
+                <td className="border px-2 py-1 no-print">
+                  <button className="text-blue-600 mr-2" onClick={() => startEditRecord(r)}>
+                    編輯
+                  </button>
+                  <button className="text-red-600" onClick={() => deleteRecord(r.id)}>
+                    刪除
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 統計區 */}
+      <div className="bg-white p-4 rounded shadow mt-4">
+        <h2 className="font-semibold mb-2">統計</h2>
+
+        <p>外包工總計：{totalLabor.toFixed(1)}</p>
+        <p>支援工總計：{totalSupport.toFixed(1)}</p>
+        <p>工數合計：{totalLaborSum.toFixed(1)}</p>
+
+        <h3 className="font-semibold mt-4">吊車統計</h3>
+        {Object.keys(craneStats).length === 0 && <p>無吊車紀錄</p>}
+
+        {Object.entries(craneStats).map(([spec, day]) => (
+          <p key={spec}>{spec}：{day.toFixed(1)} 天</p>
+        ))}
+      </div>
+
+      {/* -------------------- 新增工程 Modal -------------------- */}
+      <dialog id="newProject" className="p-4 rounded shadow">
+        <h2 className="text-lg font-bold mb-2">新增工程</h2>
+
+        <input
+          className="border p-2 w-full mb-2"
+          placeholder="工程案號"
+          value={newProject.number}
+          onChange={e => setNewProject({ ...newProject, number: e.target.value })}
+        />
+
+        <input
+          className="border p-2 w-full mb-2"
+          placeholder="工程名稱"
+          value={newProject.name}
+          onChange={e => setNewProject({ ...newProject, name: e.target.value })}
+        />
+
+        <div className="flex justify-end gap-2">
+          <button className="px-4 py-2 bg-gray-400 text-white rounded"
+            onClick={() => document.getElementById("newProject").close()}>
+            取消
+          </button>
+
+          <button className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={() => { addProject(); document.getElementById("newProject").close(); }}>
+            新增
+          </button>
+        </div>
+      </dialog>
+
+      {/* -------------------- 新增外包商 Modal -------------------- */}
+      <dialog id="newVendor" className="p-4 rounded shadow">
+        <h2 className="text-lg font-bold mb-2">新增外包商</h2>
+
+        <input
+          className="border p-2 w-full mb-2"
+          placeholder="外包商名稱"
+          value={newVendorName}
+          onChange={e => setNewVendorName(e.target.value)}
+        />
+
+        <div className="flex justify-end gap-2">
+          <button className="px-4 py-2 bg-gray-400 text-white rounded"
+            onClick={() => document.getElementById("newVendor").close()}>
+            取消
+          </button>
+
+          <button className="px-4 py-2 bg-green-600 text-white rounded"
+            onClick={() => { addVendor(); document.getElementById("newVendor").close(); }}>
+            新增
+          </button>
+        </div>
+      </dialog>
+
+      {/* -------------------- 新增工數 Modal -------------------- */}
+      {showLaborModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <div className="bg-white p-4 rounded shadow w-80">
+            <h2 className="text-lg font-bold mb-2">新增工數</h2>
+
+            <input type="date" className="border p-2 w-full mb-2"
+              value={laborForm.date}
+              onChange={e => setLaborForm({ ...laborForm, date: e.target.value })}
+            />
+
+            <input type="number" className="border p-2 w-full mb-2"
+              placeholder="外包工"
+              value={laborForm.labor}
+              onChange={e => setLaborForm({ ...laborForm, labor: e.target.value })}
+            />
+
+            <input type="number" className="border p-2 w-full mb-2"
+              placeholder="支援工"
+              value={laborForm.support}
+              onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
+            />
+
+            <input className="border p-2 w-full mb-2"
+              placeholder="備註"
+              value={laborForm.note}
+              onChange={e => setLaborForm({ ...laborForm, note: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 bg-gray-500 text-white rounded"
+                onClick={() => setShowLaborModal(false)}>
+                取消
+              </button>
+
+              <button className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={addLaborRecord}>
+                新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------- 新增吊車 Modal -------------------- */}
+      {showCraneModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <div className="bg-white p-4 rounded shadow w-80">
+            <h2 className="text-lg font-bold mb-2">新增吊車</h2>
+
+            <input type="date" className="border p-2 w-full mb-2"
+              value={craneForm.date}
+              onChange={e => setCraneForm({ ...craneForm, date: e.target.value })}
+            />
+
+            <input className="border p-2 w-full mb-2"
+              placeholder="吊車規格 例：45T"
+              value={craneForm.spec}
+              onChange={e => setCraneForm({ ...craneForm, spec: e.target.value })}
+            />
+
+            <input type="number" className="border p-2 w-full mb-2"
+              placeholder="HR（小時）"
+              value={craneForm.hr}
+              onChange={e => setCraneForm({
+                ...craneForm,
+                hr: e.target.value
+              })}
+            />
+
+            <input className="border p-2 w-full mb-2"
+              placeholder="備註"
+              value={craneForm.note}
+              onChange={e => setCraneForm({ ...craneForm, note: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 bg-gray-500 text-white rounded"
+                onClick={() => setShowCraneModal(false)}>
+                取消
+              </button>
+
+              <button className="px-4 py-2 bg-yellow-600 text-white rounded"
+                onClick={addCraneRecord}>
+                新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------- 編輯紀錄 Modal -------------------- */}
+      {editRecord && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <div className="bg-white p-4 rounded shadow w-80">
+            <h2 className="text-lg font-bold mb-2">編輯紀錄</h2>
+
+            {/* 日期 */}
+            <input
+              type="date"
+              className="border p-2 w-full mb-2"
+              value={editRecord.date}
+              onChange={e => setEditRecord({ ...editRecord, date: e.target.value })}
+            />
+
+            {/* 工數紀錄編輯 */}
+            {editRecord.type === "labor" && (
+              <>
+                <input
+                  type="number"
+                  className="border p-2 w-full mb-2"
+                  placeholder="外包工"
+                  value={editRecord.labor}
+                  onChange={e =>
+                    setEditRecord({ ...editRecord, labor: parseFloat(e.target.value || 0) })
+                  }
+                />
+
+                <input
+                  type="number"
+                  className="border p-2 w-full mb-2"
+                  placeholder="支援工"
+                  value={editRecord.support}
+                  onChange={e =>
+                    setEditRecord({ ...editRecord, support: parseFloat(e.target.value || 0) })
+                  }
+                />
+              </>
+            )}
+
+            {/* 吊車紀錄編輯 */}
+            {editRecord.type === "crane" && (
+              <>
+                <input
+                  className="border p-2 w-full mb-2"
+                  placeholder="吊車規格"
+                  value={editRecord.spec}
+                  onChange={e =>
+                    setEditRecord({ ...editRecord, spec: e.target.value })
+                  }
+                />
+
+                <input
+                  type="number"
+                  className="border p-2 w-full mb-2"
+                  placeholder="HR"
+                  value={editRecord.hr}
+                  onChange={e => {
+                    const hr = parseFloat(e.target.value || 0);
+                    const day = parseFloat((hr / 8).toFixed(1));
+                    setEditRecord({ ...editRecord, hr, day });
+                  }}
+                />
+              </>
+            )}
+
+            {/* 備註 */}
+            <input
+              className="border p-2 w-full mb-2"
+              placeholder="備註"
+              value={editRecord.note}
+              onChange={e => setEditRecord({ ...editRecord, note: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded"
+                onClick={() => setEditRecord(null)}
+              >
+                取消
+              </button>
+
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  const updated = records.map(r =>
+                    r.id === editRecord.id ? editRecord : r
+                  );
+                  setRecords(updated);
+                  setEditRecord(null);
+                }}
+              >
+                儲存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+/* ---------------------------------------------------
+   React Render
+--------------------------------------------------- */
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
