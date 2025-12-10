@@ -694,23 +694,23 @@ return (
           ))}
         </select>
 
-        <button className="bg-blue-600 text-white px-4 py-2 rounded"
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded"
           onClick={() => {
             const num = prompt("工程案號");
             const name = prompt("工程名稱");
             if (!num || !name) return;
             const id = Date.now().toString();
-            setProjects([...projects, { id, number:num, name }]);
+            setProjects([...projects, { id, number: num, name }]);
             setCurrentProjectId(id);
           }}
         >新增工程</button>
 
-        <button className="bg-red-600 text-white px-4 py-2 rounded"
-          onClick={deleteProject}
-        >刪除工程</button>
+        <button className="bg-red-600 text-white px-4 py-2 rounded" onClick={deleteProject}>
+          刪除工程
+        </button>
       </div>
     </div>
-
 
     {/* ========= 外包商管理 ========= */}
     <div className="bg-white p-4 rounded shadow mb-4 no-print">
@@ -724,38 +724,36 @@ return (
           {vendors.map(v => <option key={v} value={v}>{v}</option>)}
         </select>
 
-        <button className="bg-green-600 text-white px-4 py-2 rounded"
-          onClick={addVendor}
-        >新增外包商</button>
+        <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={addVendor}>
+          新增外包商
+        </button>
       </div>
     </div>
 
-
     {/* ========= 操作按鈕 ========= */}
     <div className="flex gap-4 mb-4 no-print">
-      <button className="bg-blue-500 text-white px-4 py-2 rounded"
-        onClick={() => setModalType("labor")}
-      >新增工數</button>
+      <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => setModalType("labor")}>
+        新增工數
+      </button>
 
-      <button className="bg-yellow-500 text-white px-4 py-2 rounded"
-        onClick={() => setModalType("crane")}
-      >新增吊車</button>
+      <button className="bg-yellow-500 text-white px-4 py-2 rounded" onClick={() => setModalType("crane")}>
+        新增吊車
+      </button>
 
-      <button className="bg-gray-700 text-white px-4 py-2 rounded"
-        onClick={() => window.print()}
-      >列印</button>
+      <button className="bg-gray-700 text-white px-4 py-2 rounded" onClick={() => window.print()}>
+        列印
+      </button>
 
-      <button className="bg-red-600 text-white px-4 py-2 rounded"
-        onClick={exportPDF}
-      >匯出 PDF</button>
+      <button className="bg-red-600 text-white px-4 py-2 rounded" onClick={exportPDF}>
+        匯出 PDF
+      </button>
 
-      <button className="bg-purple-600 text-white px-4 py-2 rounded"
-        onClick={exportExcel}
-      >匯出 Excel</button>
+      <button className="bg-purple-600 text-white px-4 py-2 rounded" onClick={exportExcel}>
+        匯出 Excel
+      </button>
     </div>
 
-
-    {/* ========= PDF 區域：明細表 + 統計 + 圓餅圖 ========= */}
+    {/* ========== PDF 區域（明細 + 統計 + 圓餅圖） ========== */}
     <div id="pdfArea">
 
       {/* 明細表 */}
@@ -863,7 +861,6 @@ return (
       </div>
     </div>
 
-
     {/* =============== 新增工數 Modal =============== */}
     {modalType === "labor" && (
       <Modal onClose={() => setModalType("")}>
@@ -886,12 +883,13 @@ return (
           onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
         />
 
-<input
-  placeholder="備註"
-  className="border w-full p-2 rounded mb-2"
-  value={laborForm.note}
-  onChange={(e) => setLaborForm({ ...laborForm, note: e.target.value })}
-/>
+        <textarea
+          className="border w-full p-2 rounded mb-2"
+          rows="2"
+          placeholder="備註"
+          value={laborForm.note}
+          onChange={e => setLaborForm({ ...laborForm, note: e.target.value })}
+        ></textarea>
 
         <button className="bg-blue-600 text-white w-full py-2 rounded" onClick={addLabor}>
           儲存
@@ -940,8 +938,7 @@ return (
 
   </div>
 );
-}
-
+};
 
 /***********************************************************
  *               React DOM Render (React18)
