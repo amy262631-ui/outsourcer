@@ -373,26 +373,16 @@ function App() {
       </div>
 
 <div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300">
-
   <h2 className="text-xl font-extrabold mb-4 text-gray-800">
     📊 統　計　總　覽
   </h2>
 
-  {/* 工數統計 */}
   <div className="text-lg font-bold space-y-2 text-gray-900">
     <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
     <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
     <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
   </div>
 
-  {/* 小計 */}
-  <div className="mt-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 rounded">
-    <p className="text-xl font-extrabold text-yellow-800">
-      🧮 小計：工數 {totalLaborSum.toFixed(1)}
-    </p>
-  </div>
-
-  {/* 吊車統計 */}
   <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">
     🏗️ 吊車統計
   </h3>
@@ -408,8 +398,8 @@ function App() {
       </p>
     ))}
   </div>
-
 </div>
+
 
       {/* -------------------- 新增工程 Modal -------------------- */}
       <dialog id="newProject" className="p-4 rounded shadow">
