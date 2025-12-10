@@ -638,13 +638,13 @@ const exportExcel = () => {
     // 3. 寫入預估工數和落差 
     sheetData.push([]);
     // 關鍵修正點：將所有方括號和特殊符號移除，只用空格
-    sheetData.push(["預估 工數", estimateLabor || "-"]]); 
-    sheetData.push(["工數落差 (預估 - 實際)", laborDiff.toFixed(1)]); 
+    sheetData.push(["預估工數", estimateLabor || "-"]]); 
+    sheetData.push(["工數落差(預估-實際)", laborDiff.toFixed(1)]); 
 
     // 4. 寫入預估吊車 
     sheetData.push([]);
     // 關鍵修正點：將所有方括號和特殊符號移除，只用空格
-    sheetData.push(["預估 吊車"]);
+    sheetData.push(["預估吊車"]);
     if (estimateCranes.length > 0) {
         estimateCranes.forEach(c =>
             sheetData.push([c.spec, `${c.day}天`])
