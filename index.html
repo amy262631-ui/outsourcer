@@ -387,7 +387,7 @@ const EditDayModal = () => {
             cranes: [
                 ...editDay.cranes,
                 {
-                    // 🌟 建議使用 Date.now() + Math.random() 確保唯一性
+                    // 確保唯一性
                     id: Date.now() + Math.random(), 
                     spec: "",
                     hr: 0,
@@ -407,19 +407,16 @@ const EditDayModal = () => {
         const { date, labor, support, cranes, notesText } = editDay;
 
         if (!date) return alert("日期不可空白");
-        if (labor < 0 || support < 0) return alert("工數不得為負");
+        if (Number(labor) < 0 || Number(support) < 0) return alert("工數不得為負");
 
-        // =======================================================
         // 🌟 修正點：定義 filtered 變數 (解決 ReferenceError)
-        // 從所有紀錄 (records) 中，過濾掉所有與目前編輯日期 (date) 相同的舊紀錄。
-        // =======================================================
         const filtered = records.filter(record => record.date !== date);
         
         // 2. 建立新的紀錄陣列
         const newRecords = [...filtered]; 
 
         // 3. 重新寫入「工數紀錄」
-        if (labor > 0 || support > 0 || notesText.trim().length > 0) {
+        if (Number(labor) > 0 || Number(support) > 0 || notesText.trim().length > 0) {
             
             // 將 notesText 轉為儲存用的字串格式
             const finalNote = notesText
@@ -427,14 +424,14 @@ const EditDayModal = () => {
                 : '';
 
             newRecords.push({
-                // 建議使用更可靠的唯一 ID 方案，例如時間戳
                 id: Date.now(), 
                 type: "labor",
                 projectId: currentProjectId,
                 vendor: currentVendor,
                 date,
-                labor: Number(labor), // 確保儲存為數字
-                support: Number(support), // 確保儲存為數字
+                // 🌟 關鍵：在這裡轉型為 Number
+                labor: Number(labor), 
+                support: Number(support), 
                 hr: 0,
                 day: 0,
                 spec: "",
@@ -448,7 +445,6 @@ const EditDayModal = () => {
             if (!c.spec && Number(c.hr) === 0) return; 
 
             newRecords.push({
-                // 同樣建議修正 ID 產生方式
                 id: Date.now() + Math.random(), 
                 type: "crane",
                 projectId: currentProjectId,
@@ -484,7 +480,8 @@ const EditDayModal = () => {
                     type="number"
                     className="border w-full p-2 rounded mb-2"
                     value={editDay.labor}
-                    onChange={e => setEditDay({ ...editDay, labor: e.target.value })} // 🌟 改為 e.target.value 讓用戶輸入更流暢，計算時再轉數字
+                    // 🌟 修正：只傳遞字串，讓輸入流暢
+                    onChange={e => setEditDay({ ...editDay, labor: e.target.value })} 
                 />
 
                 <label className="font-bold">支援工</label>
@@ -492,17 +489,18 @@ const EditDayModal = () => {
                     type="number"
                     className="border w-full p-2 rounded mb-2"
                     value={editDay.support}
-                    onChange={e => setEditDay({ ...editDay, support: e.target.value })} // 🌟 改為 e.target.value
+                    // 🌟 修正：只傳遞字串，讓輸入流暢
+                    onChange={e => setEditDay({ ...editDay, support: e.target.value })} 
                 />
 
-                {/* 修正後的備註欄位 */}
+                {/* 備註欄位 (notesText) */}
                 <label className="font-bold">備註（多筆工數會自動合併）</label>
                 <textarea
                     className="border w-full p-2 rounded mb-2"
                     rows="2"
                     value={editDay.notesText ?? ""}
                     onChange={e => {
-                        // 🌟 關鍵：這裡只更新 notesText，解決輸入連續打字問題
+                        // 🌟 關鍵：只更新 notesText，解決輸入連續打字問題
                         setEditDay(prev => ({
                             ...prev,
                             notesText: e.target.value,
@@ -525,6 +523,7 @@ const EditDayModal = () => {
                             className="border p-2 rounded w-28"
                             placeholder="規格 例：25T"
                             value={c.spec}
+                            // 🌟 修正：確保 updateCrane 邏輯是正確的
                             onChange={e => updateCrane(index, "spec", e.target.value)}
                         />
 
@@ -546,7 +545,7 @@ const EditDayModal = () => {
                         </button>
                     </div>
 
-                    {/* 吊車備註 (這裡的輸入是正常的) */}
+                    {/* 吊車備註 */}
                     <input
                         className="border w-full p-2 rounded mt-2"
                         placeholder="備註（可空白）"
@@ -923,6 +922,7 @@ return (
                 <input placeholder="吊車規格 例：45T"
                     className="border w-full p-2 rounded mb-2"
                     value={craneForm.spec}
+                    // 🌟 修正：確保 spec 狀態更新
                     onChange={e => setCraneForm({ ...craneForm, spec: e.target.value })}
                 />
 
@@ -932,10 +932,10 @@ return (
                     onChange={e => setCraneForm({ ...craneForm, hr: e.target.value })}
                 />
 
-                {/* 🌟 修正點：將 laborForm.note 替換為 craneForm.note */}
                 <input placeholder="備註"
                     className="border w-full p-2 rounded mb-2"
                     value={craneForm.note}
+                    // 🌟 修正：確保 craneForm.note 狀態更新
                     onChange={(e) => setCraneForm({ ...craneForm, note: e.target.value })} 
                 />
 
