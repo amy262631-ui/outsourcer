@@ -280,15 +280,14 @@ function App() {
    *                 開啟編輯某一天資料
    ***********************************************************/
   const startEditDay = (day) => {
-    setEditDay({
-      date: day.date,
-      labor: day.labor,
-      support: day.support,
-      cranes: JSON.parse(JSON.stringify(day.cranes)),  // deep copy
-      notes: [...day.notes]
-    });
-    setModalType("editDay");
-  };
+setEditDay({
+  date: day.date,
+  labor: day.labor,
+  support: day.support,
+  cranes: JSON.parse(JSON.stringify(day.cranes)),
+  notes: [...day.notes],
+  notesText: day.notes.join("\n")
+});
   /***********************************************************
    *                 明細表 UI（一天只有一列）
    ***********************************************************/
@@ -484,12 +483,19 @@ const EditDayModal = () => {
         />
 
         <label className="font-bold">備註（多筆工數會自動合併）</label>
-        <textarea
-          className="border w-full p-2 rounded mb-2"
-          rows="2"
-          value={editDay.notes.join("\n")}
-          onChange={e => setEditDay({ ...editDay, notes: e.target.value.split("\n") })}
-        ></textarea>
+<textarea
+  className="border w-full p-2 rounded mb-2"
+  rows="2"
+  value={editDay.notesText ?? ""}
+  onChange={e => {
+    const text = e.target.value;
+    setEditDay(prev => ({
+      ...prev,
+      notesText: text,
+      notes: text.split("\n")
+    }));
+  }}
+></textarea>
       </div>
 
       {/* 吊車區 */}
