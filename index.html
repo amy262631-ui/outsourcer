@@ -264,7 +264,7 @@ const exportExcel = () => {
   const wb = XLSX.utils.book_new();
 
   const sheetData = [
-    [titleText],
+    [titleText],   // 標題
     ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
   ];
 
@@ -293,44 +293,74 @@ const exportExcel = () => {
   });
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  XLSX.utils.book_append_sheet(wb, ws, "統計表");
 
-  XLSX.writeFile(wb, `${titleText}.xlsx`);
-};
-/* ---------------------------------------------------
-   匯出 PDF（自動命名 + 支援 Chart.js 圖表）
---------------------------------------------------- */
-const exportPDF = () => {
-  if (!currentProjectId) {
-    alert("請先選擇工程");
-    return;
-  }
+  /* ---------------------------------------------------
+      設定欄位寬度
+  --------------------------------------------------- */
+  ws['!cols'] = [
+    { wch: 10 },  // 類型
+    { wch: 12 },  // 日期
+    { wch: 12 },  // 外包商
+    { wch: 10 },  // 外包工
+    { wch: 10 },  // 支援工
+    { wch: 12 },  // 吊車規格
+    { wch: 8 },   // 天
+    { wch: 20 },  // 備註
+  ];
 
-  const element = document.getElementById("pdfArea");
+  /* ---------------------------------------------------
+      標題合併儲存格 + 樣式
+  --------------------------------------------------- */
+  ws['!merges'] = [
+    { s: { r:0, c:0 }, e: { r:0, c:7 } }  // 合併 A1~H1
+  ];
 
-  /* 🟦 Chart.js Canvas 轉成圖片，避免 PDF 出現白框 */
-  const canvases = element.querySelectorAll("canvas");
-  canvases.forEach((canvas) => {
-    const imgData = canvas.toDataURL("image/png");
-    const img = document.createElement("img");
-    img.src = imgData;
-    img.style.width = canvas.style.width;
-    img.style.height = canvas.style.height;
-    canvas.replaceWith(img);
-  });
-
-  const opt = {
-    margin: 10,
-    filename: `${titleText}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  ws["A1"].s = {
+    font: { bold: true, sz: 16 },
+    alignment: { horizontal: "center" }
   };
 
-  html2pdf().set(opt).from(element).save()
-    .then(() => {
-      console.log("PDF 下載完成");
-    });
+  /* ---------------------------------------------------
+      表頭樣式
+  --------------------------------------------------- */
+  const headerCells = ["A2","B2","C2","D2","E2","F2","G2","H2"];
+  headerCells.forEach(cell => {
+    if (ws[cell]) {
+      ws[cell].s = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "DDDDDD" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+    }
+  });
+
+  /* ---------------------------------------------------
+      套用表格框線
+  --------------------------------------------------- */
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = 1; R <= range.e.r; R++) {
+    for (let C = 0; C <= 7; C++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          border: {
+            top: { style: "thin", color: { rgb: "000000" }},
+            bottom: { style: "thin", color: { rgb: "000000" }},
+            left: { style: "thin", color: { rgb: "000000" }},
+            right: { style: "thin", color: { rgb: "000000" }},
+          }
+        };
+      }
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, "統計表");
+  XLSX.writeFile(wb, `${titleText}.xlsx`);
 };
 
   /* ---------------------------------------------------
