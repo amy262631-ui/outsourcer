@@ -231,6 +231,47 @@ const [newEstimateCrane, setNewEstimateCrane] = React.useState({
   const projectRecords = records
     .filter(r => r.projectId === currentProjectId && r.vendor === currentVendor)
     .sort((a, b) => a.date === b.date ? a.id - b.id : a.date.localeCompare(b.date));
+  /* =====================================================
+      將所有紀錄依「日期」彙總成一行（吊車多筆合併）
+===================================================== */
+const groupedRecords = {};
+
+projectRecords.forEach(r => {
+  if (!groupedRecords[r.date]) {
+    groupedRecords[r.date] = {
+      date: r.date,
+      vendor: r.vendor,
+      labor: 0,
+      support: 0,
+      cranes: [],
+      notes: []
+    };
+  }
+
+  // 工數
+  if (r.type === "labor") {
+    groupedRecords[r.date].labor += r.labor;
+    groupedRecords[r.date].support += r.support;
+  }
+
+  // 吊車
+  if (r.type === "crane") {
+    groupedRecords[r.date].cranes.push({
+      spec: r.spec,
+      day: r.day
+    });
+  }
+
+  // 備註
+  if (r.note && r.note.trim() !== "") {
+    groupedRecords[r.date].notes.push(r.note);
+  }
+});
+
+// 轉為陣列並依日期排序
+const groupedList = Object.values(groupedRecords).sort((a, b) =>
+  a.date.localeCompare(b.date)
+);
 
   /* --- 工數統計 --- */
   const totalLabor = projectRecords.filter(r => r.type === "labor").reduce((s, r) => s + r.labor, 0);
@@ -460,21 +501,45 @@ const laborDiffColor =
             </thead>
 
             <tbody>
-              {projectRecords.map(r => (
-                <tr key={r.id}>
-                  <td className="border px-2 py-1">{r.date}</td>
-                  <td className="border px-2 py-1">{r.vendor}</td>
-                  <td className="border px-2 py-1">{r.labor || ""}</td>
-                  <td className="border px-2 py-1">{r.support || ""}</td>
-                  <td className="border px-2 py-1">{r.spec || ""}</td>
-                  <td className="border px-2 py-1">{r.type === "crane" ? r.day.toFixed(1) : ""}</td>
-                  <td className="border px-2 py-1">{r.note}</td>
-                  <td className="border px-2 py-1 no-print">
-                    <button className="text-blue-600 mr-2" onClick={() => startEdit(r)}>編輯</button>
-                    <button className="text-red-600" onClick={() => deleteRecord(r.id)}>刪除</button>
-                  </td>
-                </tr>
-              ))}
+{groupedList.map((row, index) => (
+  <tr key={index}>
+    <td className="border px-2 py-1">{row.date}</td>
+    <td className="border px-2 py-1">{row.vendor}</td>
+
+    {/* 外包工 */}
+    <td className="border px-2 py-1">{row.labor || ""}</td>
+
+    {/* 支援工 */}
+    <td className="border px-2 py-1">{row.support || ""}</td>
+
+    {/* 吊車規格（多筆換行） */}
+    <td className="border px-2 py-1 whitespace-pre-line">
+      {row.cranes.length > 0
+        ? row.cranes.map(c => `${c.spec}（${c.day}天）`).join("\n")
+        : ""
+      }
+    </td>
+
+    {/* 天（如果多筆吊車 → 合計） */}
+    <td className="border px-2 py-1">
+      {row.cranes.length > 0
+        ? row.cranes.reduce((s, c) => s + c.day, 0).toFixed(1)
+        : ""
+      }
+    </td>
+
+    {/* 備註（多筆換行） */}
+    <td className="border px-2 py-1 whitespace-pre-line">
+      {row.notes.join("\n")}
+    </td>
+
+    {/* 操作（保留對原始資料操作） */}
+    <td className="border px-2 py-1 no-print">
+      <span className="text-gray-500 text-sm">(合併列無法編輯)</span>
+    </td>
+  </tr>
+))}
+
 
               {/* 小計 */}
               <tr className="bg-yellow-100 font-bold text-lg">
