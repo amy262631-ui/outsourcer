@@ -551,29 +551,28 @@ return (
 </script>
 
 <dialog id="newProject" class="p-4 rounded shadow">
-  <h3 class="text-lg font-bold mb-2">新增工程</h3>
+  <h2 class="text-lg font-bold mb-2">新增工程</h2>
 
-  <input id="npNum" placeholder="工程案號"
-    class="border p-2 rounded w-full mb-2" />
+  <input id="npNum" class="border p-2 w-full mb-2" placeholder="工程案號" />
+  <input id="npName" class="border p-2 w-full mb-2" placeholder="工程名稱" />
 
-  <input id="npName" placeholder="工程名稱"
-    class="border p-2 rounded w-full mb-2" />
+  <div class="flex justify-end gap-2">
+    <button class="px-4 py-2 bg-gray-400 text-white rounded"
+      onclick="document.getElementById('newProject').close()">
+      取消
+    </button>
 
-  <button class="bg-blue-600 text-white px-4 py-2 rounded w-full mb-2"
-    onclick="
-      window.addProject(
-        document.getElementById('npNum').value,
-        document.getElementById('npName').value
-      );
-      document.getElementById('newProject').close();
-    ">
-    新增
-  </button>
-
-  <button class="bg-gray-400 text-white px-4 py-2 rounded w-full"
-    onclick="document.getElementById('newProject').close()">
-    取消
-  </button>
+    <button class="px-4 py-2 bg-blue-600 text-white rounded"
+      onclick="
+        window.addProject(
+          document.getElementById('npNum').value,
+          document.getElementById('npName').value
+        );
+        document.getElementById('newProject').close();
+      ">
+      新增
+    </button>
+  </div>
 </dialog>
 
 
