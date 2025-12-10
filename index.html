@@ -406,34 +406,38 @@ const EditDayModal = () => {
   /***********************************************************
    *               儲存修改：覆蓋整天所有 records
    ***********************************************************/
-  const saveDay = () => {
-    const { date, labor, support, cranes, notes } = editDay;
+const saveDay = () => {
+    // 🌟 關鍵修正：從 editDay 中取出 notesText，而不是 notes 
+    const { date, labor, support, cranes, notesText } = editDay; 
 
     if (!date) return alert("日期不可空白");
     if (labor < 0 || support < 0) return alert("工數不得為負");
 
-    // 先過濾掉原本這一天全部紀錄
-    const filtered = records.filter(
-      r => !(r.projectId === currentProjectId && r.vendor === currentVendor && r.date === date)
-    );
-
+    // ... (省略過濾舊紀錄邏輯)
     const newRecords = [...filtered];
 
     // 重新寫入「工數紀錄」
-    if (labor > 0 || support > 0 || notes.length > 0) {
-      newRecords.push({
-        id: records.length + 1,
-        type: "labor",
-        projectId: currentProjectId,
-        vendor: currentVendor,
-        date,
-        labor,
-        support,
-        hr: 0,
-        day: 0,
-        spec: "",
-        note: notes.join("；")
-      });
+    // 🌟 關鍵修正：使用 notesText 判斷和轉換備註
+    if (labor > 0 || support > 0 || notesText.trim().length > 0) { 
+        
+        // 將 notesText 轉為儲存用的字串格式
+        const finalNote = notesText
+            ? notesText.split('\n').filter(n => n.trim() !== '').join('；')
+            : '';
+
+        newRecords.push({
+            id: records.length + 1,
+            type: "labor",
+            projectId: currentProjectId,
+            vendor: currentVendor,
+            date,
+            labor,
+            support,
+            hr: 0,
+            day: 0,
+            spec: "",
+            note: finalNote // 👈 使用轉換後的 finalNote
+        });
     }
 
     // 寫入吊車紀錄
@@ -484,17 +488,18 @@ const EditDayModal = () => {
           onChange={e => setEditDay({ ...editDay, support: Number(e.target.value) })}
         />
 
-        <label className="font-bold">備註（多筆工數會自動合併）</label>
+        /* 修正後的備註欄位 */
+<label className="font-bold">備註（多筆工數會自動合併）</label>
 <textarea
   className="border w-full p-2 rounded mb-2"
   rows="2"
   value={editDay.notesText ?? ""}
   onChange={e => {
-    const text = e.target.value;
+    // 🌟 關鍵：這裡只更新 notesText
     setEditDay(prev => ({
       ...prev,
-      notesText: text,
-      notes: text.split("\n")
+      notesText: e.target.value,
+      // 移除對 notes 陣列的即時更新，避免觸發不必要的失焦
     }));
   }}
 ></textarea>
@@ -922,10 +927,11 @@ return (
         />
 
 <input
-  placeholder="備註"
-  className="border w-full p-2 rounded mb-2"
-  value={laborForm.note}
-  onChange={(e) => setLaborForm({ ...laborForm, note: e.target.value })}
+  placeholder="備註"
+  className="border w-full p-2 rounded mb-2"
+  value={craneForm.note}
+  // 🌟 關鍵修正：將 setLaborForm 改為 setCraneForm
+  onChange={(e) => setCraneForm({ ...craneForm, note: e.target.value })} 
 />
 
         <button className="bg-yellow-600 text-white w-full py-2 rounded" onClick={addCrane}>
