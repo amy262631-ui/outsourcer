@@ -293,6 +293,27 @@ const exportExcel = () => {
   });
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
+/* ---------------------------------------------------
+   匯出 PDF（自動命名）
+--------------------------------------------------- */
+const exportPDF = () => {
+  if (!currentProjectId) {
+    alert("請先選擇工程");
+    return;
+  }
+
+  const element = document.getElementById("pdfArea");
+
+  const opt = {
+    margin: 10,
+    filename: `${titleText}.pdf`,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  };
+
+  html2pdf().set(opt).from(element).save();
+};
 
   /* ---------------------------------------------------
       設定欄位寬度
