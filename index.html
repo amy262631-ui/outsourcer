@@ -864,19 +864,11 @@ return (
           onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
         />
 
-      <input
+<input
   placeholder="備註"
   className="border w-full p-2 rounded mb-2"
-  value={editRecord.note ?? ""}
-  onChange={(e) => {
-    const value = e.target.value;
-
-    // 🔥 這是重點：使用 function 形式的 setState -> 不會被覆蓋
-    setEditRecord(prev => ({
-      ...prev,
-      note: value
-    }));
-  }}
+  value={laborForm.note}
+  onChange={(e) => setLaborForm({ ...laborForm, note: e.target.value })}
 />
 
         <button className="bg-blue-600 text-white w-full py-2 rounded" onClick={addLabor}>
