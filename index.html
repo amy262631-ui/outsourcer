@@ -375,15 +375,25 @@ function App() {
   ))}
 
   {/* 小計列 —— 放在 tbody 最底部才正確 */}
-  <tr className="bg-yellow-100 font-bold text-lg">
-    <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
-    <td className="border px-2 py-2 text-blue-700">{totalLabor.toFixed(1)}</td>
-    <td className="border px-2 py-2 text-blue-700">{totalSupport.toFixed(1)}</td>
-    <td className="border px-2 py-2 text-red-700" colSpan="3">
-      合計：{totalLaborSum.toFixed(1)}
-    </td>
-    <td className="border no-print"></td>
-  </tr>
+<tr className="bg-yellow-100 font-bold text-lg">
+  <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
+
+  {/* 外包工總計 */}
+  <td className="border px-2 py-2 text-blue-700">
+    {totalLabor.toFixed(1)}
+  </td>
+
+  {/* 支援工總計 */}
+  <td className="border px-2 py-2 text-blue-700">
+    {totalSupport.toFixed(1)}
+  </td>
+
+  {/* 合計：外包工 + 支援工 */}
+  <td className="border px-2 py-2 text-red-700" colSpan="4">
+    合計：{totalLaborSum.toFixed(1)}
+  </td>
+</tr>
+
 
 </tbody>
         </table>
