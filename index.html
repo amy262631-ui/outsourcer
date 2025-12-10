@@ -919,11 +919,12 @@ return (
           onChange={e => setCraneForm({ ...craneForm, hr: e.target.value })}
         />
 
-        <input placeholder="備註"
-          className="border w-full p-2 rounded mb-2"
-          value={craneForm.note}
-          onChange={e => setCraneForm({ ...craneForm, note: e.target.value })}
-        />
+<input
+  placeholder="備註"
+  className="border w-full p-2 rounded mb-2"
+  value={laborForm.note}
+  onChange={(e) => setLaborForm({ ...laborForm, note: e.target.value })}
+/>
 
         <button className="bg-yellow-600 text-white w-full py-2 rounded" onClick={addCrane}>
           儲存
