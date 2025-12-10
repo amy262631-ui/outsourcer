@@ -264,7 +264,7 @@ const exportExcel = () => {
   const wb = XLSX.utils.book_new();
 
   const sheetData = [
-    [titleText],
+    [titleText],   // 標題
     ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
   ];
 
@@ -294,12 +294,28 @@ const exportExcel = () => {
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
+  /* 欄位寬度 */
   ws['!cols'] = [
-    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
-    { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 20 }
+    { wch: 10 },  // 類型
+    { wch: 12 },  // 日期
+    { wch: 12 },  // 外包商
+    { wch: 10 },  // 外包工
+    { wch: 10 },  // 支援工
+    { wch: 12 },  // 吊車規格
+    { wch: 8 },   // 天
+    { wch: 20 },  // 備註
   ];
 
-  ws['!merges'] = [{ s: { r:0, c:0 }, e: { r:0, c:7 } }];
+  /* 標題合併儲存格 (A1~H1) */
+  ws['!merges'] = [
+    { s: { r:0, c:0 }, e: { r:0, c:7 } }
+  ];
+
+  /* 標題樣式 */
+  ws["A1"].s = {
+    font: { bold: true, sz: 16 },
+    alignment: { horizontal: "center" }
+  };
 
   XLSX.utils.book_append_sheet(wb, ws, "統計表");
   XLSX.writeFile(wb, `${titleText}.xlsx`);
@@ -326,75 +342,6 @@ const exportPDF = () => {
   };
 
   html2pdf().set(opt).from(element).save();
-};
-
-  /* ---------------------------------------------------
-      設定欄位寬度
-  --------------------------------------------------- */
-  ws['!cols'] = [
-    { wch: 10 },  // 類型
-    { wch: 12 },  // 日期
-    { wch: 12 },  // 外包商
-    { wch: 10 },  // 外包工
-    { wch: 10 },  // 支援工
-    { wch: 12 },  // 吊車規格
-    { wch: 8 },   // 天
-    { wch: 20 },  // 備註
-  ];
-
-  /* ---------------------------------------------------
-      標題合併儲存格 + 樣式
-  --------------------------------------------------- */
-  ws['!merges'] = [
-    { s: { r:0, c:0 }, e: { r:0, c:7 } }  // 合併 A1~H1
-  ];
-
-  ws["A1"].s = {
-    font: { bold: true, sz: 16 },
-    alignment: { horizontal: "center" }
-  };
-
-  /* ---------------------------------------------------
-      表頭樣式
-  --------------------------------------------------- */
-  const headerCells = ["A2","B2","C2","D2","E2","F2","G2","H2"];
-  headerCells.forEach(cell => {
-    if (ws[cell]) {
-      ws[cell].s = {
-        font: { bold: true },
-        fill: { fgColor: { rgb: "DDDDDD" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      };
-    }
-  });
-
-  /* ---------------------------------------------------
-      套用表格框線
-  --------------------------------------------------- */
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = 1; R <= range.e.r; R++) {
-    for (let C = 0; C <= 7; C++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      if (ws[cellAddress]) {
-        ws[cellAddress].s = {
-          border: {
-            top: { style: "thin", color: { rgb: "000000" }},
-            bottom: { style: "thin", color: { rgb: "000000" }},
-            left: { style: "thin", color: { rgb: "000000" }},
-            right: { style: "thin", color: { rgb: "000000" }},
-          }
-        };
-      }
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, "統計表");
-  XLSX.writeFile(wb, `${titleText}.xlsx`);
 };
 
   /* ---------------------------------------------------
