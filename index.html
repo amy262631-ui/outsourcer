@@ -294,7 +294,7 @@ function App() {
    ***********************************************************/
   const DetailTable = () => (
     <div className="overflow-x-auto bg-white rounded shadow mt-4">
-      <table className="w-full border">
+      <table className="w-full border text-center">
         <thead className="bg-gray-200">
           <tr>
             <th className="border px-2 py-1">日期</th>
@@ -864,17 +864,17 @@ return (
           onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
         />
 
-       <input
+      <input
   placeholder="備註"
   className="border w-full p-2 rounded mb-2"
   value={editRecord.note ?? ""}
   onChange={(e) => {
-    const note = e.target.value;
+    const value = e.target.value;
 
-    // 「安全更新」方式，不會因為 re-render 被覆蓋
+    // 🔥 這是重點：使用 function 形式的 setState -> 不會被覆蓋
     setEditRecord(prev => ({
       ...prev,
-      note
+      note: value
     }));
   }}
 />
