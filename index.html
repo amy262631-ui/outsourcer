@@ -377,26 +377,6 @@ const titleText = currentProject
   </div>
 
 </div>
-/* ---------------------------------------------------
-      React Portal Modal Component
---------------------------------------------------- */
-const Modal = ({ children, onClose }) => {
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-      <div className="bg-white p-4 rounded shadow w-80">
-        {children}
-
-        <button
-          className="mt-3 bg-gray-500 text-white px-4 py-2 rounded w-full"
-          onClick={onClose}
-        >
-          關閉
-        </button>
-      </div>
-    </div>,
-    document.getElementById("modal-root")
-  );
-};
 
 /* ---------------------------------------------------
       Modal：新增工數
