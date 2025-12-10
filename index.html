@@ -1043,11 +1043,13 @@ if (editRecord) {
   );
 }
 /* ===================================================
-      ReactDOM Render
+      ReactDOM Render App
 =================================================== */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script> <!-- Babel script 結束（非常重要） -->
 
+</script>  <!-- ←← 這是唯一應該存在的 script 結尾 -->
+
+<!-- Modal 掛載點 -->
 <div id="modal-root"></div>
 
 </body>
