@@ -608,16 +608,32 @@ const exportExcel = () => {
     const sheetData = [
         [titleText],
         [],
-        ["日期", "外包工", "支援工", "吊車規格與HR", "備註"]
+        ["日期", "外包工", "支援工", "吊車規格與台數", "備註"]
     ];
 
-    // 1. 寫入明細資料
+    // 1. 寫入明細資料 (核心修正區塊)
     groupedRecords.forEach(day => {
+        
+        // **[新增邏輯]：彙總每日吊車時數並換算成台數**
+        const grouped = {};
+        day.cranes.forEach(c => {
+            if (!grouped[c.spec]) grouped[c.spec] = 0;
+            grouped[c.spec] += c.hr; // 累加時數
+        });
+
+        // 格式化輸出字串：規格 (X.X台)
+        const craneString = Object.entries(grouped)
+            .map(([spec, totalHr]) => {
+                const units = (totalHr / 8).toFixed(1); // 換算成台數 (8 HR = 1 台)
+                return `${spec} (${units}台)`;
+            })
+            .join("\n");
+
         sheetData.push([
             day.date,
             day.labor,
             day.support,
-            day.cranes.map(c => `${c.spec} (${c.hr}HR)`).join("\n"),
+            craneString, // 使用彙總後的台數字串
             day.notes.join("\n")
         ]);
     });
@@ -631,28 +647,30 @@ const exportExcel = () => {
 
     // 3. 寫入預估工數和落差 
     sheetData.push([]);
-    sheetData.push(["預估工數", estimateLabor || "-"]); // <<<< 報錯點
+    sheetData.push(["預估工數", estimateLabor || "-"]);
     sheetData.push(["工數落差(預估-實際)", laborDiff.toFixed(1)]); 
 
-    // 4. 寫入預估吊車 
+    // 4. 寫入預估吊車 (保持只輸出規格與天數)
     sheetData.push([]);
     sheetData.push(["預估吊車"]);
+    sheetData.push(["規格", "天數"]);
     if (estimateCranes.length > 0) {
         estimateCranes.forEach(c =>
-            sheetData.push([c.spec, `${c.day}天`])
+            sheetData.push([c.spec, c.day]) 
         );
     } else {
         sheetData.push(["無預估吊車資料"]);
     }
     
-    // 5. 寫入實際吊車統計
+    // 5. 寫入實際吊車統計 (保持只輸出規格與天數)
     sheetData.push([]);
     sheetData.push(["實際吊車統計"]);
+    sheetData.push(["規格", "天數"]);
     if (Object.keys(craneStats).length === 0) {
         sheetData.push(["無實際吊車資料"]);
     } else {
         Object.entries(craneStats).forEach(([spec, day]) =>
-            sheetData.push([spec, `${day.toFixed(1)}天`])
+            sheetData.push([spec, day.toFixed(1)]) 
         );
     }
 
@@ -661,13 +679,16 @@ const exportExcel = () => {
     
     // 調整欄位寬度
     ws["!cols"] = [
-        { wch: 12 }, // 日期
+        { wch: 20 }, // 日期
         { wch: 10 }, // 外包工
         { wch: 10 }, // 支援工
-        { wch: 20 }, // 吊車規格與HR
+        { wch: 20 }, // 吊車規格與台數 (這裡需要較寬)
         { wch: 20 }, // 備註
         { wch: 15 } // 額外欄位 (用於統計數據)
     ];
+
+    // 修正標頭：將第四欄的標題也修改，以符合新的輸出
+    sheetData[2][3] = "吊車規格與台數"; 
 
     XLSX.utils.book_append_sheet(wb, ws, "統計");
     XLSX.writeFile(wb, `${titleText}.xlsx`);
