@@ -611,6 +611,7 @@ const exportExcel = () => {
         ["日期", "外包工", "支援工", "吊車規格與HR", "備註"]
     ];
 
+    // 1. 寫入明細資料
     groupedRecords.forEach(day => {
         sheetData.push([
             day.date,
@@ -621,30 +622,56 @@ const exportExcel = () => {
         ]);
     });
 
+    // 2. 寫入實際工數小計
     sheetData.push([]);
-    sheetData.push(["外包工小計", totalLabor]);
-    sheetData.push(["支援工小計", totalSupport]);
+    sheetData.push(["實際工數小計"]);
+    sheetData.push(["外包工", totalLabor]);
+    sheetData.push(["支援工", totalSupport]);
     sheetData.push(["工數合計", totalLaborSum]);
 
+    // 3. 寫入預估工數和落差
     sheetData.push([]);
-    sheetData.push(["吊車統計"]);
-    Object.entries(craneStats).forEach(([spec, day]) =>
-        sheetData.push([spec, `${day.toFixed(1)}天`])
-    );
+    sheetData.push(["⭐ 預估工數", estimateLabor || "-"]]);
+    sheetData.push(["工數落差 (預估 - 實際)", laborDiff.toFixed(1)]); 
+
+    // 4. 寫入預估吊車 (這裡就是您需要的資料)
+    sheetData.push([]);
+    sheetData.push(["⭐ 預估吊車"]);
+    if (estimateCranes.length > 0) {
+        estimateCranes.forEach(c =>
+            sheetData.push([c.spec, `${c.day}天`])
+        );
+    } else {
+        sheetData.push(["無預估吊車資料"]);
+    }
+    
+    // 5. 寫入實際吊車統計
+    sheetData.push([]);
+    sheetData.push(["實際吊車統計"]);
+    if (Object.keys(craneStats).length === 0) {
+        sheetData.push(["無實際吊車資料"]);
+    } else {
+        Object.entries(craneStats).forEach(([spec, day]) =>
+            sheetData.push([spec, `${day.toFixed(1)}天`])
+        );
+    }
+
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    
+    // 調整欄位寬度
     ws["!cols"] = [
-        { wch: 12 },
-        { wch: 10 },
-        { wch: 10 },
-        { wch: 20 },
-        { wch: 20 }
+        { wch: 12 }, // 日期
+        { wch: 10 }, // 外包工
+        { wch: 10 }, // 支援工
+        { wch: 20 }, // 吊車規格與HR
+        { wch: 20 }, // 備註
+        { wch: 15 } // 額外欄位 (用於統計數據)
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "統計");
     XLSX.writeFile(wb, `${titleText}.xlsx`);
 };
-
 
 /***********************************************************
  * 圓餅圖 PieChart
