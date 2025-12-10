@@ -103,6 +103,37 @@ function App() {
     setCurrentProjectId(newId);
     setNewProject({ number: "", name: "" });
   };
+  /* ---------------------------------------------------
+      刪除工程
+--------------------------------------------------- */
+const deleteProject = () => {
+  if (!currentProjectId) {
+    alert("請先選擇工程");
+    return;
+  }
+
+  const p = projects.find(p => p.id === currentProjectId);
+  if (!p) return;
+
+  if (!confirm(`確定要刪除工程：${p.number} ${p.name}？\n（相關工數與吊車紀錄也會被刪除）`)) {
+    return;
+  }
+
+  // 刪除工程
+  const newProjects = projects.filter(p => p.id !== currentProjectId);
+
+  // 刪除該工程所有紀錄
+  const newRecords = records.filter(r => r.projectId !== currentProjectId);
+
+  setProjects(newProjects);
+  setRecords(newRecords);
+
+  // 清空選擇
+  setCurrentProjectId("");
+
+  alert("已刪除工程與其相關紀錄！");
+};
+
 
   /* ---------------------------------------------------
       新增外包商
@@ -376,6 +407,13 @@ const exportPDF = () => {
           >
             新增工程
           </button>
+          {/* 新增：刪除工程按鈕 */}
+         <button
+         className="bg-red-600 text-white px-4 py-2 rounded"
+         onClick={deleteProject}
+        >
+         刪除工程
+       </button>
         </div>
       </div>
 
