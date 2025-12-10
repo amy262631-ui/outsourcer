@@ -264,7 +264,7 @@ const exportExcel = () => {
   const wb = XLSX.utils.book_new();
 
   const sheetData = [
-    [titleText],   // 標題
+    [titleText],
     ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
   ];
 
@@ -293,6 +293,19 @@ const exportExcel = () => {
   });
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+  ws['!cols'] = [
+    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+    { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 20 }
+  ];
+
+  ws['!merges'] = [{ s: { r:0, c:0 }, e: { r:0, c:7 } }];
+
+  XLSX.utils.book_append_sheet(wb, ws, "統計表");
+  XLSX.writeFile(wb, `${titleText}.xlsx`);
+};
+
+
 /* ---------------------------------------------------
    匯出 PDF（自動命名）
 --------------------------------------------------- */
