@@ -277,11 +277,11 @@ function App() {
     const startEditDay = (day) => {
         setEditDay({
             date: day.date,
-            labor: day.labor,
-            support: day.support,
+            // 🌟 注意：labor/support 轉為字串以供輸入欄位使用，避免 Number 轉換問題
+            labor: String(day.labor), 
+            support: String(day.support),
             cranes: JSON.parse(JSON.stringify(day.cranes)),
-            notes: [...day.notes],
-            notesText: day.notes.join("\n") // 🌟 關鍵：將備註陣列合併為單一字串供 textarea 使用
+            notesText: day.notes.join("\n") 
         });
         setModalType("editDay");
     }; 
@@ -358,44 +358,50 @@ function App() {
  * Modal：編輯整天資料（工數 + 吊車）
  ***********************************************************/
 const EditDayModal = () => {
+    // 🌟 優化：將複雜的 editDay 狀態拆分為內部狀態，減少不必要的 App 級別重新渲染
+    const [tempLabor, setTempLabor] = React.useState(editDay.labor);
+    const [tempSupport, setTempSupport] = React.useState(editDay.support);
+    const [tempNotes, setTempNotes] = React.useState(editDay.notesText);
+    const [tempCranes, setTempCranes] = React.useState(editDay.cranes);
 
     /* 更新某一筆吊車項目 */
     const updateCrane = (index, field, value) => {
-        const updated = [...editDay.cranes];
-        updated[index][field] = value;
+        setTempCranes(prevCranes => {
+            const updated = [...prevCranes];
+            const newCrane = { ...updated[index], [field]: value };
+            
+            // 若修改 HR → 自動換算天數
+            if (field === "hr") {
+                const hr = Number(value || 0);
+                newCrane.day = parseFloat((hr / 8).toFixed(1));
+            }
 
-        // 若修改 HR → 自動換算天數
-        if (field === "hr") {
-            const hr = Number(value);
-            updated[index].day = parseFloat((hr / 8).toFixed(1));
-        }
-
-        setEditDay({ ...editDay, cranes: updated });
+            updated[index] = newCrane;
+            return updated; // 🌟 確保返回新的陣列參照
+        });
     };
 
     /* 刪除吊車一筆 */
     const deleteCrane = (index) => {
-        const updated = [...editDay.cranes];
-        updated.splice(index, 1);
-        setEditDay({ ...editDay, cranes: updated });
+        setTempCranes(prevCranes => {
+            const updated = [...prevCranes];
+            updated.splice(index, 1);
+            return updated; // 🌟 確保返回新的陣列參照
+        });
     };
 
     /* 新增吊車 */
     const addCraneRow = () => {
-        setEditDay({
-            ...editDay,
-            cranes: [
-                ...editDay.cranes,
-                {
-                    // 確保唯一性
-                    id: Date.now() + Math.random(), 
-                    spec: "",
-                    hr: 0,
-                    day: 0,
-                    note: ""
-                }
-            ]
-        });
+        setTempCranes(prevCranes => [
+            ...prevCranes,
+            {
+                id: Date.now() + Math.random(), 
+                spec: "",
+                hr: 0,
+                day: 0,
+                note: ""
+            }
+        ]);
     };
 
 
@@ -403,24 +409,25 @@ const EditDayModal = () => {
      * 儲存修改：覆蓋整天所有 records
      ***********************************************************/
     const saveDay = () => {
-        // 1. 從 editDay 中取出所需資料
-        const { date, labor, support, cranes, notesText } = editDay;
-
-        if (!date) return alert("日期不可空白");
-        if (Number(labor) < 0 || Number(support) < 0) return alert("工數不得為負");
-
-        // 🌟 修正點：定義 filtered 變數 (解決 ReferenceError)
-        const filtered = records.filter(record => record.date !== date);
+        // 1. 從內部狀態取出資料
+        const date = editDay.date;
         
-        // 2. 建立新的紀錄陣列
+        if (!date) return alert("日期不可空白");
+        if (Number(tempLabor) < 0 || Number(tempSupport) < 0) return alert("工數不得為負");
+
+        // 2. 過濾舊紀錄
+        const filtered = records.filter(record => 
+            !(record.date === date && record.projectId === currentProjectId && record.vendor === currentVendor)
+        );
+        
+        // 3. 建立新的紀錄陣列
         const newRecords = [...filtered]; 
 
-        // 3. 重新寫入「工數紀錄」
-        if (Number(labor) > 0 || Number(support) > 0 || notesText.trim().length > 0) {
+        // 4. 重新寫入「工數紀錄」
+        if (Number(tempLabor) > 0 || Number(tempSupport) > 0 || tempNotes.trim().length > 0) {
             
-            // 將 notesText 轉為儲存用的字串格式
-            const finalNote = notesText
-                ? notesText.split('\n').filter(n => n.trim() !== '').join('；')
+            const finalNote = tempNotes
+                ? tempNotes.split('\n').filter(n => n.trim() !== '').join('；')
                 : '';
 
             newRecords.push({
@@ -430,8 +437,8 @@ const EditDayModal = () => {
                 vendor: currentVendor,
                 date,
                 // 🌟 關鍵：在這裡轉型為 Number
-                labor: Number(labor), 
-                support: Number(support), 
+                labor: Number(tempLabor), 
+                support: Number(tempSupport), 
                 hr: 0,
                 day: 0,
                 spec: "",
@@ -439,8 +446,8 @@ const EditDayModal = () => {
             });
         }
 
-        // 4. 寫入吊車紀錄
-        cranes.forEach(c => {
+        // 5. 寫入吊車紀錄
+        tempCranes.forEach(c => {
             // 排除規格和 HR 皆為空或 0 的項目
             if (!c.spec && Number(c.hr) === 0) return; 
 
@@ -451,6 +458,7 @@ const EditDayModal = () => {
                 vendor: currentVendor,
                 date,
                 spec: c.spec,
+                // 🌟 關鍵：在這裡轉型為 Number
                 hr: Number(c.hr),
                 day: Number(c.day),
                 labor: 0,
@@ -459,7 +467,7 @@ const EditDayModal = () => {
             });
         });
 
-        // 5. 更新狀態
+        // 6. 更新狀態並關閉 Modal
         setRecords(newRecords);
         setModalType("");
         setEditDay(null);
@@ -479,18 +487,18 @@ const EditDayModal = () => {
                 <input
                     type="number"
                     className="border w-full p-2 rounded mb-2"
-                    value={editDay.labor}
-                    // 🌟 修正：只傳遞字串，讓輸入流暢
-                    onChange={e => setEditDay({ ...editDay, labor: e.target.value })} 
+                    value={tempLabor}
+                    // 🌟 優化：使用獨立狀態更新，最單純的字串傳遞
+                    onChange={e => setTempLabor(e.target.value)} 
                 />
 
                 <label className="font-bold">支援工</label>
                 <input
                     type="number"
                     className="border w-full p-2 rounded mb-2"
-                    value={editDay.support}
-                    // 🌟 修正：只傳遞字串，讓輸入流暢
-                    onChange={e => setEditDay({ ...editDay, support: e.target.value })} 
+                    value={tempSupport}
+                    // 🌟 優化：使用獨立狀態更新，最單純的字串傳遞
+                    onChange={e => setTempSupport(e.target.value)} 
                 />
 
                 {/* 備註欄位 (notesText) */}
@@ -498,32 +506,27 @@ const EditDayModal = () => {
                 <textarea
                     className="border w-full p-2 rounded mb-2"
                     rows="2"
-                    value={editDay.notesText ?? ""}
-                    onChange={e => {
-                        // 🌟 關鍵：只更新 notesText，解決輸入連續打字問題
-                        setEditDay(prev => ({
-                            ...prev,
-                            notesText: e.target.value,
-                        }));
-                    }}
+                    value={tempNotes ?? ""}
+                    // 🌟 優化：使用獨立狀態更新，最單純的字串傳遞，解決中文輸入問題
+                    onChange={e => setTempNotes(e.target.value)}
                 ></textarea>
             </div>
 
             {/* 吊車區 */}
             <h3 className="text-lg font-bold mb-2">吊車清單</h3>
 
-            {editDay.cranes.length === 0 && (
+            {tempCranes.length === 0 && (
                 <p className="text-gray-500 mb-2">目前無吊車紀錄</p>
             )}
 
-            {editDay.cranes.map((c, index) => (
+            {tempCranes.map((c, index) => (
                 <div key={index} className="border p-3 rounded mb-2 bg-gray-50">
                     <div className="flex gap-2">
                         <input
                             className="border p-2 rounded w-28"
                             placeholder="規格 例：25T"
                             value={c.spec}
-                            // 🌟 修正：確保 updateCrane 邏輯是正確的
+                            // 🌟 關鍵優化：吊車規格更新，確保狀態不可變
                             onChange={e => updateCrane(index, "spec", e.target.value)}
                         />
 
@@ -532,6 +535,7 @@ const EditDayModal = () => {
                             className="border p-2 rounded w-20"
                             placeholder="HR"
                             value={c.hr}
+                            // 🌟 關鍵優化：HR 更新，確保狀態不可變
                             onChange={e => updateCrane(index, "hr", e.target.value)}
                         />
 
@@ -550,6 +554,7 @@ const EditDayModal = () => {
                         className="border w-full p-2 rounded mt-2"
                         placeholder="備註（可空白）"
                         value={c.note}
+                        // 🌟 關鍵優化：備註更新，確保狀態不可變
                         onChange={e => updateCrane(index, "note", e.target.value)}
                     />
                 </div>
@@ -885,12 +890,14 @@ return (
 
                 <input type="number" placeholder="外包工"
                     className="border w-full p-2 rounded mb-2"
+                    // 確保輸入順暢，只傳遞字串
                     value={laborForm.labor}
                     onChange={e => setLaborForm({ ...laborForm, labor: e.target.value })}
                 />
 
                 <input type="number" placeholder="支援工"
                     className="border w-full p-2 rounded mb-2"
+                    // 確保輸入順暢，只傳遞字串
                     value={laborForm.support}
                     onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
                 />
@@ -922,12 +929,13 @@ return (
                 <input placeholder="吊車規格 例：45T"
                     className="border w-full p-2 rounded mb-2"
                     value={craneForm.spec}
-                    // 🌟 修正：確保 spec 狀態更新
+                    // 🌟 確保更新：最單純的字串傳遞
                     onChange={e => setCraneForm({ ...craneForm, spec: e.target.value })}
                 />
 
                 <input type="number" placeholder="小時 HR"
                     className="border w-full p-2 rounded mb-2"
+                    // 確保輸入順暢，只傳遞字串
                     value={craneForm.hr}
                     onChange={e => setCraneForm({ ...craneForm, hr: e.target.value })}
                 />
@@ -935,7 +943,7 @@ return (
                 <input placeholder="備註"
                     className="border w-full p-2 rounded mb-2"
                     value={craneForm.note}
-                    // 🌟 修正：確保 craneForm.note 狀態更新
+                    // 🌟 確保更新：最單純的字串傳遞
                     onChange={(e) => setCraneForm({ ...craneForm, note: e.target.value })} 
                 />
 
