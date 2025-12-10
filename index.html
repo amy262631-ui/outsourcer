@@ -17,9 +17,10 @@
 
   <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
+
+  <!-- Chart.js & Datalabels -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
 
   <style>
     @media print {
@@ -90,7 +91,6 @@ function App() {
   React.useEffect(() => saveData("vendors", vendors), [vendors]);
   React.useEffect(() => saveData("currentVendor", currentVendor), [currentVendor]);
   React.useEffect(() => saveData("records", records), [records]);
-
   /* ---------------------------------------------------
       新增工程
   --------------------------------------------------- */
@@ -147,7 +147,7 @@ function App() {
     if (!craneForm.date || !craneForm.spec || !craneForm.hr) return;
 
     const hr = parseFloat(craneForm.hr);
-    const day = parseFloat((hr / 8).toFixed(1)); // 保留 1 位小數
+    const day = parseFloat((hr / 8).toFixed(1));
 
     const newRecord = {
       id: Date.now(),
@@ -178,7 +178,7 @@ function App() {
   };
 
   /* ---------------------------------------------------
-      篩選目前工程 + 外包商的紀錄
+      依照工程 + 外包商篩選紀錄
   --------------------------------------------------- */
   const projectRecords = records.filter(r =>
     r.projectId === currentProjectId && r.vendor === currentVendor
@@ -200,59 +200,53 @@ function App() {
 
   const totalLaborSum = totalLabor + totalSupport;
 
-  const craneStats = {};
-  projectRecords.filter(r => r.type === "crane").forEach(r => {
-    if (!craneStats[r.spec]) craneStats[r.spec] = 0;
-    craneStats[r.spec] += r.day;
-  });
-
-  /* ---------------------------------------------------
-      清單標題
-  --------------------------------------------------- */
   const currentProject = projects.find(p => p.id === currentProjectId);
   const titleText = currentProject
     ? `${currentVendor} - ${currentProject.number} ${currentProject.name} 統計表`
     : "尚未選擇工程";
 
+
   /* ---------------------------------------------------
-      匯出 EXCEL
+      圓餅圖（外包工 vs 支援工）
   --------------------------------------------------- */
-  const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const sheetData = [
-      [titleText],
-      ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
-    ];
+  const pieRef = React.useRef(null);
+  const chartInstance = React.useRef(null);
 
-    projectRecords.forEach(r => {
-      sheetData.push([
-        r.type === "labor" ? "工數" : "吊車",
-        r.date,
-        r.vendor,
-        r.labor || "",
-        r.support || "",
-        r.spec || "",
-        r.type === "crane" ? r.day.toFixed(1) : "",
-        r.note || "",
-      ]);
+  React.useEffect(() => {
+    if (!pieRef.current) return;
+
+    const ctx = pieRef.current.getContext("2d");
+
+    if (chartInstance.current) chartInstance.current.destroy();
+
+    chartInstance.current = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: ["外包工", "支援工"],
+        datasets: [{
+          data: [totalLabor, totalSupport],
+          backgroundColor: ["#3B82F6", "#FBBF24"],
+        }],
+      },
+      plugins: [ChartDataLabels],
+      options: {
+        plugins: {
+          datalabels: {
+            color: "#000",
+            formatter: (value, ctx) => {
+              const total = ctx.chart.data.datasets[0].data
+                .reduce((a, b) => a + b, 0);
+              if (total === 0) return "0%";
+              return ((value / total) * 100).toFixed(1) + "%";
+            },
+            font: { weight: "bold", size: 14 }
+          },
+          legend: { position: "bottom" }
+        }
+      }
     });
+  }, [totalLabor, totalSupport]);
 
-    sheetData.push([]);
-    sheetData.push(["外包工總計", totalLabor]);
-    sheetData.push(["支援工總計", totalSupport]);
-    sheetData.push(["工數合計", totalLaborSum]);
-
-    sheetData.push([]);
-    sheetData.push(["吊車統計"]);
-    Object.entries(craneStats).forEach(([spec, day]) => {
-      sheetData.push([`${spec}`, `${day.toFixed(1)} 天`]);
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    XLSX.utils.book_append_sheet(wb, ws, "統計表");
-
-    XLSX.writeFile(wb, `${titleText}.xlsx`);
-  };
 
   /* ---------------------------------------------------
       主畫面 UI
@@ -313,6 +307,7 @@ function App() {
         </div>
       </div>
 
+
       {/* 操作按鈕 */}
       <div className="flex gap-4 mb-4 no-print">
         <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => setShowLaborModal(true)}>
@@ -331,7 +326,6 @@ function App() {
           匯出 Excel
         </button>
       </div>
-
       {/* 合併清單 */}
       <div className="overflow-x-auto bg-white rounded shadow">
         <table className="w-full border">
@@ -348,115 +342,92 @@ function App() {
             </tr>
           </thead>
 
-<tbody>
+          <tbody>
+            {projectRecords.map(r => (
+              <tr key={r.id}>
+                <td className="border px-2 py-1">{r.date}</td>
+                <td className="border px-2 py-1">{r.vendor}</td>
+                <td className="border px-2 py-1">{r.labor || ""}</td>
+                <td className="border px-2 py-1">{r.support || ""}</td>
+                <td className="border px-2 py-1">{r.spec || ""}</td>
+                <td className="border px-2 py-1">
+                  {r.type === "crane" ? r.day.toFixed(1) : ""}
+                </td>
+                <td className="border px-2 py-1">{r.note}</td>
+                <td className="border px-2 py-1 no-print">
+                  <button className="text-blue-600 mr-2" onClick={() => startEditRecord(r)}>
+                    編輯
+                  </button>
+                  <button className="text-red-600" onClick={() => deleteRecord(r.id)}>
+                    刪除
+                  </button>
+                </td>
+              </tr>
+            ))}
 
-  {/* 每一筆紀錄 */}
-  {projectRecords.map(r => (
-    <tr key={r.id}>
-      <td className="border px-2 py-1">{r.date}</td>
-      <td className="border px-2 py-1">{r.vendor}</td>
-      <td className="border px-2 py-1">{r.labor || ""}</td>
-      <td className="border px-2 py-1">{r.support || ""}</td>
-      <td className="border px-2 py-1">{r.spec || ""}</td>
-      <td className="border px-2 py-1">
-        {r.type === "crane" ? r.day.toFixed(1) : ""}
-      </td>
-      <td className="border px-2 py-1">{r.note}</td>
-
-      <td className="border px-2 py-1 no-print">
-        <button className="text-blue-600 mr-2"
-          onClick={() => startEditRecord(r)}>
-          編輯
-        </button>
-
-        <button className="text-red-600"
-          onClick={() => deleteRecord(r.id)}>
-          刪除
-        </button>
-      </td>
-    </tr>
-  ))}
-
-  {/* 小計列 —— 放在 tbody 最底部才正確 */}
-<tr className="bg-yellow-100 font-bold text-lg">
-  <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
-  <td className="border px-2 py-2 text-blue-700">{totalLabor.toFixed(1)}</td>
-  <td className="border px-2 py-2 text-blue-700">{totalSupport.toFixed(1)}</td>
-
-  {/* 右側欄位取消顯示吊車小計，只留空白 */}
-  <td className="border px-2 py-2" colSpan="3"></td>
-
-  <td className="border no-print"></td>
-</tr>
-
-
-
-</tbody>
+            {/* 小計列 */}
+            <tr className="bg-yellow-100 font-bold text-lg">
+              <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
+              <td className="border px-2 py-2 text-blue-700">{totalLabor.toFixed(1)}</td>
+              <td className="border px-2 py-2 text-blue-700">{totalSupport.toFixed(1)}</td>
+              <td className="border px-2 py-2" colSpan="3"></td>
+              <td className="border no-print"></td>
+            </tr>
+          </tbody>
         </table>
       </div>
 
-<div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300">
-  <h2 className="text-xl font-extrabold mb-4 text-gray-800">
-    📊 統　計　總　覽
-  </h2>
 
-<div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300 flex gap-6">
+      {/* 統計區塊 + 圓餅圖 */}
+      <div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300 flex gap-6">
 
-  {/* 左邊統計文字 */}
-  <div className="flex-1">
-    <h2 className="text-xl font-extrabold mb-4 text-gray-800">📊 統　計　總　覽</h2>
+        {/* 左邊統計 */}
+        <div className="flex-1">
+          <h2 className="text-xl font-extrabold mb-4 text-gray-800">📊 統　計　總　覽</h2>
 
-    <div className="text-lg font-bold space-y-2 text-gray-900">
-      <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
-      <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
-      <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
-    </div>
+          <div className="text-lg font-bold space-y-2 text-gray-900">
+            <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
+            <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
+            <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
+          </div>
 
-    <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">🏗️ 吊車統計</h3>
+          <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">🏗️ 吊車統計</h3>
 
-    {Object.keys(craneStats).length === 0 && (
-      <p className="text-gray-600 text-md font-semibold">無吊車紀錄</p>
-    )}
+          {Object.keys(craneStats).length === 0 && (
+            <p className="text-gray-600 text-md font-semibold">無吊車紀錄</p>
+          )}
 
-    <div className="space-y-1 text-lg font-bold text-gray-900">
-      {Object.entries(craneStats).map(([spec, day]) => (
-        <p key={spec}>{spec}：<span className="text-green-700">{day.toFixed(1)} 天</span></p>
-      ))}
-    </div>
-  </div>
+          <div className="space-y-1 text-lg font-bold text-gray-900">
+            {Object.entries(craneStats).map(([spec, day]) => (
+              <p key={spec}>{spec}：<span className="text-green-700">{day.toFixed(1)} 天</span></p>
+            ))}
+          </div>
+        </div>
 
-  {/* 右側圓餅圖 */}
-  <div className="w-64 h-64">
-    <canvas id="laborPieChart"></canvas>
-  </div>
+        {/* 圓餅圖 */}
+        <div className="w-64 h-64 flex justify-center items-center">
+          <canvas ref={pieRef}></canvas>
+        </div>
 
-</div>
+      </div>
 
 
-      {/* -------------------- 新增工程 Modal -------------------- */}
+      {/* 新增工程 Modal */}
       <dialog id="newProject" className="p-4 rounded shadow">
         <h2 className="text-lg font-bold mb-2">新增工程</h2>
-
-        <input
-          className="border p-2 w-full mb-2"
-          placeholder="工程案號"
+        <input className="border p-2 w-full mb-2" placeholder="工程案號"
           value={newProject.number}
-          onChange={e => setNewProject({ ...newProject, number: e.target.value })}
-        />
+          onChange={e => setNewProject({ ...newProject, number: e.target.value })} />
 
-        <input
-          className="border p-2 w-full mb-2"
-          placeholder="工程名稱"
+        <input className="border p-2 w-full mb-2" placeholder="工程名稱"
           value={newProject.name}
-          onChange={e => setNewProject({ ...newProject, name: e.target.value })}
-        />
+          onChange={e => setNewProject({ ...newProject, name: e.target.value })} />
 
         <div className="flex justify-end gap-2">
           <button className="px-4 py-2 bg-gray-400 text-white rounded"
             onClick={() => document.getElementById("newProject").close()}>
             取消
           </button>
-
           <button className="px-4 py-2 bg-blue-600 text-white rounded"
             onClick={() => { addProject(); document.getElementById("newProject").close(); }}>
             新增
@@ -464,16 +435,14 @@ function App() {
         </div>
       </dialog>
 
-      {/* -------------------- 新增外包商 Modal -------------------- */}
+
+      {/* 新增外包商 Modal */}
       <dialog id="newVendor" className="p-4 rounded shadow">
         <h2 className="text-lg font-bold mb-2">新增外包商</h2>
 
-        <input
-          className="border p-2 w-full mb-2"
-          placeholder="外包商名稱"
+        <input className="border p-2 w-full mb-2" placeholder="外包商名稱"
           value={newVendorName}
-          onChange={e => setNewVendorName(e.target.value)}
-        />
+          onChange={e => setNewVendorName(e.target.value)} />
 
         <div className="flex justify-end gap-2">
           <button className="px-4 py-2 bg-gray-400 text-white rounded"
@@ -488,191 +457,143 @@ function App() {
         </div>
       </dialog>
 
-      {/* -------------------- 新增工數 Modal -------------------- */}
+
+      {/* 新增工數 Modal */}
       {showLaborModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
           <div className="bg-white p-4 rounded shadow w-80">
+
             <h2 className="text-lg font-bold mb-2">新增工數</h2>
 
             <input type="date" className="border p-2 w-full mb-2"
               value={laborForm.date}
-              onChange={e => setLaborForm({ ...laborForm, date: e.target.value })}
-            />
+              onChange={e => setLaborForm({ ...laborForm, date: e.target.value })} />
 
             <input type="number" className="border p-2 w-full mb-2"
               placeholder="外包工"
               value={laborForm.labor}
-              onChange={e => setLaborForm({ ...laborForm, labor: e.target.value })}
-            />
+              onChange={e => setLaborForm({ ...laborForm, labor: e.target.value })} />
 
             <input type="number" className="border p-2 w-full mb-2"
               placeholder="支援工"
               value={laborForm.support}
-              onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
-            />
+              onChange={e => setLaborForm({ ...laborForm, support: e.target.value })} />
 
-            <input className="border p-2 w-full mb-2"
-              placeholder="備註"
+            <input className="border p-2 w-full mb-2" placeholder="備註"
               value={laborForm.note}
-              onChange={e => setLaborForm({ ...laborForm, note: e.target.value })}
-            />
+              onChange={e => setLaborForm({ ...laborForm, note: e.target.value })} />
 
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 bg-gray-500 text-white rounded"
-                onClick={() => setShowLaborModal(false)}>
-                取消
-              </button>
+                onClick={() => setShowLaborModal(false)}>取消</button>
 
               <button className="px-4 py-2 bg-blue-600 text-white rounded"
-                onClick={addLaborRecord}>
-                新增
-              </button>
+                onClick={addLaborRecord}>新增</button>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* -------------------- 新增吊車 Modal -------------------- */}
+
+      {/* 新增吊車 Modal */}
       {showCraneModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
           <div className="bg-white p-4 rounded shadow w-80">
+
             <h2 className="text-lg font-bold mb-2">新增吊車</h2>
 
             <input type="date" className="border p-2 w-full mb-2"
               value={craneForm.date}
-              onChange={e => setCraneForm({ ...craneForm, date: e.target.value })}
-            />
+              onChange={e => setCraneForm({ ...craneForm, date: e.target.value })} />
 
-            <input className="border p-2 w-full mb-2"
-              placeholder="吊車規格 例：45T"
+            <input className="border p-2 w-full mb-2" placeholder="吊車規格 例：45T"
               value={craneForm.spec}
-              onChange={e => setCraneForm({ ...craneForm, spec: e.target.value })}
-            />
+              onChange={e => setCraneForm({ ...craneForm, spec: e.target.value })} />
 
             <input type="number" className="border p-2 w-full mb-2"
               placeholder="HR（小時）"
               value={craneForm.hr}
-              onChange={e => setCraneForm({
-                ...craneForm,
-                hr: e.target.value
-              })}
-            />
+              onChange={e => setCraneForm({ ...craneForm, hr: e.target.value })} />
 
-            <input className="border p-2 w-full mb-2"
-              placeholder="備註"
+            <input className="border p-2 w-full mb-2" placeholder="備註"
               value={craneForm.note}
-              onChange={e => setCraneForm({ ...craneForm, note: e.target.value })}
-            />
+              onChange={e => setCraneForm({ ...craneForm, note: e.target.value })} />
 
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 bg-gray-500 text-white rounded"
-                onClick={() => setShowCraneModal(false)}>
-                取消
-              </button>
+                onClick={() => setShowCraneModal(false)}>取消</button>
 
               <button className="px-4 py-2 bg-yellow-600 text-white rounded"
-                onClick={addCraneRecord}>
-                新增
-              </button>
+                onClick={addCraneRecord}>新增</button>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* -------------------- 編輯紀錄 Modal -------------------- */}
+
+      {/* 編輯紀錄 Modal */}
       {editRecord && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
           <div className="bg-white p-4 rounded shadow w-80">
+
             <h2 className="text-lg font-bold mb-2">編輯紀錄</h2>
 
-            {/* 日期 */}
-            <input
-              type="date"
-              className="border p-2 w-full mb-2"
+            <input type="date" className="border p-2 w-full mb-2"
               value={editRecord.date}
-              onChange={e => setEditRecord({ ...editRecord, date: e.target.value })}
-            />
+              onChange={e => setEditRecord({ ...editRecord, date: e.target.value })} />
 
-            {/* 工數紀錄編輯 */}
             {editRecord.type === "labor" && (
               <>
-                <input
-                  type="number"
-                  className="border p-2 w-full mb-2"
+                <input type="number" className="border p-2 w-full mb-2"
                   placeholder="外包工"
                   value={editRecord.labor}
-                  onChange={e =>
-                    setEditRecord({ ...editRecord, labor: parseFloat(e.target.value || 0) })
-                  }
-                />
+                  onChange={e => setEditRecord({ ...editRecord, labor: parseFloat(e.target.value || 0) })} />
 
-                <input
-                  type="number"
-                  className="border p-2 w-full mb-2"
+                <input type="number" className="border p-2 w-full mb-2"
                   placeholder="支援工"
                   value={editRecord.support}
-                  onChange={e =>
-                    setEditRecord({ ...editRecord, support: parseFloat(e.target.value || 0) })
-                  }
-                />
+                  onChange={e => setEditRecord({ ...editRecord, support: parseFloat(e.target.value || 0) })} />
               </>
             )}
 
-            {/* 吊車紀錄編輯 */}
             {editRecord.type === "crane" && (
               <>
-                <input
-                  className="border p-2 w-full mb-2"
+                <input className="border p-2 w-full mb-2"
                   placeholder="吊車規格"
                   value={editRecord.spec}
-                  onChange={e =>
-                    setEditRecord({ ...editRecord, spec: e.target.value })
-                  }
-                />
+                  onChange={e => setEditRecord({ ...editRecord, spec: e.target.value })} />
 
-                <input
-                  type="number"
-                  className="border p-2 w-full mb-2"
+                <input type="number" className="border p-2 w-full mb-2"
                   placeholder="HR"
                   value={editRecord.hr}
                   onChange={e => {
                     const hr = parseFloat(e.target.value || 0);
                     const day = parseFloat((hr / 8).toFixed(1));
                     setEditRecord({ ...editRecord, hr, day });
-                  }}
-                />
+                  }} />
               </>
             )}
 
-            {/* 備註 */}
-            <input
-              className="border p-2 w-full mb-2"
-              placeholder="備註"
+            <input className="border p-2 w-full mb-2" placeholder="備註"
               value={editRecord.note}
-              onChange={e => setEditRecord({ ...editRecord, note: e.target.value })}
-            />
+              onChange={e => setEditRecord({ ...editRecord, note: e.target.value })} />
 
             <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 bg-gray-500 text-white rounded"
-                onClick={() => setEditRecord(null)}
-              >
-                取消
-              </button>
+              <button className="px-4 py-2 bg-gray-500 text-white rounded"
+                onClick={() => setEditRecord(null)}>取消</button>
 
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded"
+              <button className="px-4 py-2 bg-blue-600 text-white rounded"
                 onClick={() => {
                   const updated = records.map(r =>
                     r.id === editRecord.id ? editRecord : r
                   );
                   setRecords(updated);
                   setEditRecord(null);
-                }}
-              >
-                儲存
-              </button>
+                }}>儲存</button>
             </div>
+
           </div>
         </div>
       )}
