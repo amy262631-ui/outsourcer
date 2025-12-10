@@ -1046,17 +1046,15 @@ if (editRecord) {
 /* ===================================================
       渲染 Modal（如有）
 =================================================== */
-ReactDOM.createRoot(document.getElementById("modal-root")).render(
-  modalContent ? modalContent : <></>
-);
-
+if (modalContent) {
+  ReactDOM.createRoot(document.getElementById("modal-root")).render(modalContent);
+} else {
+  ReactDOM.createRoot(document.getElementById("modal-root")).render(<></>);
+}
 /* ===================================================
       渲染 App 主畫面
 =================================================== */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-
 </script> <!-- ← React 程式碼結束 -->
-
 </body>
 </html>
-
