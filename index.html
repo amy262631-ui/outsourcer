@@ -17,6 +17,9 @@
 
   <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 
   <style>
     @media print {
@@ -377,18 +380,15 @@ function App() {
   {/* 小計列 —— 放在 tbody 最底部才正確 */}
 <tr className="bg-yellow-100 font-bold text-lg">
   <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
+  <td className="border px-2 py-2 text-blue-700">{totalLabor.toFixed(1)}</td>
+  <td className="border px-2 py-2 text-blue-700">{totalSupport.toFixed(1)}</td>
 
-  {/* 外包工總計 */}
-  <td className="border px-2 py-2 text-blue-700">
-    {totalLabor.toFixed(1)}
-  </td>
+  {/* 右側欄位取消顯示吊車小計，只留空白 */}
+  <td className="border px-2 py-2" colSpan="3"></td>
 
-  {/* 支援工總計 */}
-  <td className="border px-2 py-2 text-blue-700">
-    {totalSupport.toFixed(1)}
-  </td>
+  <td className="border no-print"></td>
+</tr>
 
- </tr>
 
 
 </tbody>
@@ -400,27 +400,36 @@ function App() {
     📊 統　計　總　覽
   </h2>
 
-  <div className="text-lg font-bold space-y-2 text-gray-900">
-    <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
-    <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
-    <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
+<div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300 flex gap-6">
+
+  {/* 左邊統計文字 */}
+  <div className="flex-1">
+    <h2 className="text-xl font-extrabold mb-4 text-gray-800">📊 統　計　總　覽</h2>
+
+    <div className="text-lg font-bold space-y-2 text-gray-900">
+      <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
+      <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
+      <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
+    </div>
+
+    <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">🏗️ 吊車統計</h3>
+
+    {Object.keys(craneStats).length === 0 && (
+      <p className="text-gray-600 text-md font-semibold">無吊車紀錄</p>
+    )}
+
+    <div className="space-y-1 text-lg font-bold text-gray-900">
+      {Object.entries(craneStats).map(([spec, day]) => (
+        <p key={spec}>{spec}：<span className="text-green-700">{day.toFixed(1)} 天</span></p>
+      ))}
+    </div>
   </div>
 
-  <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">
-    🏗️ 吊車統計
-  </h3>
-
-  {Object.keys(craneStats).length === 0 && (
-    <p className="text-gray-600 text-md font-semibold">無吊車紀錄</p>
-  )}
-
-  <div className="space-y-1 text-lg font-bold text-gray-900">
-    {Object.entries(craneStats).map(([spec, day]) => (
-      <p key={spec}>
-        {spec}：<span className="text-green-700">{day.toFixed(1)} 天</span>
-      </p>
-    ))}
+  {/* 右側圓餅圖 */}
+  <div className="w-64 h-64">
+    <canvas id="laborPieChart"></canvas>
   </div>
+
 </div>
 
 
