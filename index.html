@@ -310,49 +310,6 @@ const titleText = currentProject
   : "尚未選擇工程";
 
 /* ---------------------------------------------------
-      圓餅圖（外包工 vs 支援工）
---------------------------------------------------- */
-const pieRef = React.useRef(null);
-const chartInstance = React.useRef(null);
-
-React.useEffect(() => {
-  if (!pieRef.current) return;
-
-  const ctx = pieRef.current.getContext("2d");
-
-  /* 如果圖已存在 → 先銷毀後重建 */
-  if (chartInstance.current) chartInstance.current.destroy();
-
-  chartInstance.current = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["外包工", "支援工"],
-      datasets: [
-        {
-          data: [totalLabor, totalSupport],
-          backgroundColor: ["#3B82F6", "#FBBF24"],
-        },
-      ],
-    },
-    plugins: [ChartDataLabels],
-    options: {
-      plugins: {
-        legend: { position: "bottom" },
-        datalabels: {
-          color: "#000",
-          formatter: (value, ctx) => {
-            const total = ctx.chart.data.datasets[0].data
-              .reduce((a, b) => a + b, 0);
-            if (total === 0) return "0%";
-            return ((value / total) * 100).toFixed(1) + "%";
-          },
-          font: { weight: "bold", size: 14 },
-        },
-      },
-    },
-  });
-}, [totalLabor, totalSupport]);
-/* ---------------------------------------------------
       主畫面 UI
 --------------------------------------------------- */
 return (
