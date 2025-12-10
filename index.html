@@ -629,14 +629,14 @@ const exportExcel = () => {
     sheetData.push(["支援工", totalSupport]);
     sheetData.push(["工數合計", totalLaborSum]);
 
-    // 3. 寫入預估工數和落差
+    // 3. 寫入預估工數和落差 (已移除 '⭐' )
     sheetData.push([]);
-    sheetData.push(["預估工數", estimateLabor || "-"]]);
+    sheetData.push(["** 預估工數", estimateLabor || "-"]]);
     sheetData.push(["工數落差 (預估 - 實際)", laborDiff.toFixed(1)]); 
 
-    // 4. 寫入預估吊車 (這裡就是您需要的資料)
+    // 4. 寫入預估吊車 (已移除 '⭐' )
     sheetData.push([]);
-    sheetData.push(["預估吊車"]);
+    sheetData.push(["** 預估吊車"]);
     if (estimateCranes.length > 0) {
         estimateCranes.forEach(c =>
             sheetData.push([c.spec, `${c.day}天`])
@@ -672,7 +672,6 @@ const exportExcel = () => {
     XLSX.utils.book_append_sheet(wb, ws, "統計");
     XLSX.writeFile(wb, `${titleText}.xlsx`);
 };
-
 /***********************************************************
  * 圓餅圖 PieChart
  ***********************************************************/
