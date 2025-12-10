@@ -313,11 +313,27 @@ function App() {
               <td className="border px-2 py-1">{day.labor || ""}</td>
               <td className="border px-2 py-1">{day.support || ""}</td>
 
-              {/* 吊車多行呈現 A 方案 */}
-              <td className="border px-2 py-1 whitespace-pre-line">
-                {day.cranes.length === 0 ? "" :
-                  day.cranes.map(c => `${c.spec} (${c.hr}HR)`).join("\n")}
-              </td>
+<td className="border px-2 py-1 whitespace-pre-line">
+  {(() => {
+    if (day.cranes.length === 0) return "";
+
+    // 彙總同規格的 HR
+    const grouped = {};
+    day.cranes.forEach(c => {
+      if (!grouped[c.spec]) grouped[c.spec] = 0;
+      grouped[c.spec] += c.hr;
+    });
+
+    // 轉台數
+    return Object.entries(grouped)
+      .map(([spec, totalHr]) => {
+        const units = (totalHr / 8).toFixed(1); // 台數
+        return `${spec}（${units}台）`;
+      })
+      .join("\n");
+  })()}
+</td>
+
 
               {/* 備註：多行 */}
               <td className="border px-2 py-1 whitespace-pre-line">
