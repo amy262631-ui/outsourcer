@@ -373,20 +373,33 @@ function App() {
       </div>
 
       {/* 統計區 */}
-      <div className="bg-white p-4 rounded shadow mt-4">
-        <h2 className="font-semibold mb-2">統計</h2>
+<div className="bg-white p-6 rounded shadow mt-6 border-2 border-gray-300">
+  <h2 className="text-xl font-extrabold mb-4 text-gray-800">
+    📊 統　計　總　覽
+  </h2>
 
-        <p>外包工總計：{totalLabor.toFixed(1)}</p>
-        <p>支援工總計：{totalSupport.toFixed(1)}</p>
-        <p>工數合計：{totalLaborSum.toFixed(1)}</p>
+  <div className="text-lg font-bold space-y-2 text-gray-900">
+    <p>外包工總計：<span className="text-blue-700">{totalLabor.toFixed(1)}</span></p>
+    <p>支援工總計：<span className="text-blue-700">{totalSupport.toFixed(1)}</span></p>
+    <p>工數合計：<span className="text-red-700">{totalLaborSum.toFixed(1)}</span></p>
+  </div>
 
-        <h3 className="font-semibold mt-4">吊車統計</h3>
-        {Object.keys(craneStats).length === 0 && <p>無吊車紀錄</p>}
+  <h3 className="text-lg font-extrabold mt-6 mb-2 text-gray-800">
+    🏗️ 吊車統計
+  </h3>
 
-        {Object.entries(craneStats).map(([spec, day]) => (
-          <p key={spec}>{spec}：{day.toFixed(1)} 天</p>
-        ))}
-      </div>
+  {Object.keys(craneStats).length === 0 && (
+    <p className="text-gray-600 text-md font-semibold">無吊車紀錄</p>
+  )}
+
+  <div className="space-y-1 text-lg font-bold text-gray-900">
+    {Object.entries(craneStats).map(([spec, day]) => (
+      <p key={spec}>
+        {spec}：<span className="text-green-700">{day.toFixed(1)} 天</span>
+      </p>
+    ))}
+  </div>
+</div>
 
       {/* -------------------- 新增工程 Modal -------------------- */}
       <dialog id="newProject" className="p-4 rounded shadow">
