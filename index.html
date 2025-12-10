@@ -864,11 +864,20 @@ return (
           onChange={e => setLaborForm({ ...laborForm, support: e.target.value })}
         />
 
-        <input placeholder="備註"
-          className="border w-full p-2 rounded mb-2"
-          value={laborForm.note}
-          onChange={e => setLaborForm({ ...laborForm, note: e.target.value })}
-        />
+       <input
+  placeholder="備註"
+  className="border w-full p-2 rounded mb-2"
+  value={editRecord.note ?? ""}
+  onChange={(e) => {
+    const note = e.target.value;
+
+    // 「安全更新」方式，不會因為 re-render 被覆蓋
+    setEditRecord(prev => ({
+      ...prev,
+      note
+    }));
+  }}
+/>
 
         <button className="bg-blue-600 text-white w-full py-2 rounded" onClick={addLabor}>
           儲存
