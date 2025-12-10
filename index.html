@@ -189,21 +189,30 @@ function App() {
     return a.date.localeCompare(b.date);
   });
 
-  /* ---------------------------------------------------
-      統計
-  --------------------------------------------------- */
-  const totalLabor = projectRecords.filter(r => r.type === "labor")
-    .reduce((sum, r) => sum + r.labor, 0);
+/* ---------------------------------------------------
+    統計
+--------------------------------------------------- */
+const totalLabor = projectRecords.filter(r => r.type === "labor")
+  .reduce((sum, r) => sum + r.labor, 0);
 
-  const totalSupport = projectRecords.filter(r => r.type === "labor")
-    .reduce((sum, r) => sum + r.support, 0);
+const totalSupport = projectRecords.filter(r => r.type === "labor")
+  .reduce((sum, r) => sum + r.support, 0);
 
-  const totalLaborSum = totalLabor + totalSupport;
+const totalLaborSum = totalLabor + totalSupport;
 
-  const currentProject = projects.find(p => p.id === currentProjectId);
-  const titleText = currentProject
-    ? `${currentVendor} - ${currentProject.number} ${currentProject.name} 統計表`
-    : "尚未選擇工程";
+/* 吊車統計（缺這個會報錯） */
+const craneStats = {};
+projectRecords
+  .filter(r => r.type === "crane")
+  .forEach(r => {
+    if (!craneStats[r.spec]) craneStats[r.spec] = 0;
+    craneStats[r.spec] += r.day;
+  });
+
+const currentProject = projects.find(p => p.id === currentProjectId);
+const titleText = currentProject
+  ? `${currentVendor} - ${currentProject.number} ${currentProject.name} 統計表`
+  : "尚未選擇工程";
 
 
   /* ---------------------------------------------------
@@ -247,6 +256,46 @@ function App() {
     });
   }, [totalLabor, totalSupport]);
 
+/* ---------------------------------------------------
+   匯出 EXCEL
+--------------------------------------------------- */
+const exportExcel = () => {
+  const wb = XLSX.utils.book_new();
+
+  const sheetData = [
+    [titleText],
+    ["類型","日期","外包商","外包工","支援工","吊車規格","天","備註"],
+  ];
+
+  projectRecords.forEach(r => {
+    sheetData.push([
+      r.type === "labor" ? "工數" : "吊車",
+      r.date,
+      r.vendor,
+      r.labor || "",
+      r.support || "",
+      r.spec || "",
+      r.type === "crane" ? r.day.toFixed(1) : "",
+      r.note || "",
+    ]);
+  });
+
+  sheetData.push([]);
+  sheetData.push(["外包工總計", totalLabor]);
+  sheetData.push(["支援工總計", totalSupport]);
+  sheetData.push(["工數合計", totalLaborSum]);
+
+  sheetData.push([]);
+  sheetData.push(["吊車統計"]);
+  Object.entries(craneStats).forEach(([spec, day]) => {
+    sheetData.push([`${spec}`, `${day.toFixed(1)} 天`]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  XLSX.utils.book_append_sheet(wb, ws, "統計表");
+
+  XLSX.writeFile(wb, `${titleText}.xlsx`);
+};
 
   /* ---------------------------------------------------
       主畫面 UI
