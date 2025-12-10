@@ -71,7 +71,17 @@ function App() {
   const [vendors, setVendors] = React.useState(load("vendors", ["紘展"]));
   const [currentVendor, setCurrentVendor] = React.useState(load("currentVendor", "紘展"));
   const [newVendor, setNewVendor] = React.useState("");
+  /* -------------------- 預估工數 -------------------- */
+const [estimateLabor, setEstimateLabor] = React.useState(load("estimateLabor", ""));
 
+/* -------------------- 預估吊車（可多列） -------------------- */
+const [estimateCranes, setEstimateCranes] = React.useState(load("estimateCranes", []));
+
+/* 暫存：新增一列用 */
+const [newEstimateCrane, setNewEstimateCrane] = React.useState({
+  spec: "",
+  day: ""
+});
   /* -------------------- 工數與吊車紀錄 -------------------- */
   const [records, setRecords] = React.useState(load("records", []));
 
@@ -95,6 +105,9 @@ function App() {
   React.useEffect(() => save("vendors", vendors), [vendors]);
   React.useEffect(() => save("currentVendor", currentVendor), [currentVendor]);
   React.useEffect(() => save("records", records), [records]);
+  React.useEffect(() => save("estimateLabor", estimateLabor), [estimateLabor]);
+  React.useEffect(() => save("estimateCranes", estimateCranes), [estimateCranes]);
+
 
   /* =====================================================
           增加工程
@@ -223,6 +236,15 @@ function App() {
   const totalLabor = projectRecords.filter(r => r.type === "labor").reduce((s, r) => s + r.labor, 0);
   const totalSupport = projectRecords.filter(r => r.type === "labor").reduce((s, r) => s + r.support, 0);
   const totalLaborSum = totalLabor + totalSupport;
+  /* --- 工數落差（預估 - 實際）--- */
+  const laborDiff = estimateLabor
+  ? Number(estimateLabor) - totalLaborSum
+  : 0;
+
+const laborDiffColor =
+  laborDiff > 0 ? "text-green-600 font-bold"
+  : laborDiff < 0 ? "text-red-600 font-bold"
+  : "text-gray-600";
 
   /* --- 吊車統計 --- */
   const craneStats = {};
@@ -476,7 +498,81 @@ function App() {
             <p className="text-lg">工數合計：
               <span className="text-red-700 font-bold">{totalLaborSum.toFixed(1)}</span>
             </p>
+            <div className="mt-4">
+  <h3 className="font-bold mb-1 text-gray-800">⭐ 預估工數</h3>
+  <input
+    type="number"
+    className="border p-2 rounded w-40"
+    placeholder="輸入預估工數"
+    value={estimateLabor}
+    onChange={(e) => setEstimateLabor(e.target.value)}
+  />
 
+  <p className="mt-2">
+    工數落差（預估 - 實際）：
+    <span className={laborDiffColor}>
+      {laborDiff > 0 ? "+" : ""}
+      {laborDiff.toFixed(1)}
+    </span>
+  </p>
+</div>
+{/* -------- 預估吊車列表 -------- */}
+<div className="mt-6">
+  <h3 className="font-bold mb-2 text-gray-800">⭐ 預估吊車（可多筆）</h3>
+
+  {estimateCranes.length === 0 && <p className="text-gray-500">尚未新增預估吊車</p>}
+
+  <div className="space-y-2">
+    {estimateCranes.map((c, idx) => (
+      <div key={idx} className="flex items-center gap-2">
+        <span className="min-w-[60px]">{c.spec}</span>
+        <span className="min-w-[60px]">{c.day} 天</span>
+        <button
+          className="text-red-600"
+          onClick={() => {
+            const copy = [...estimateCranes];
+            copy.splice(idx, 1);
+            setEstimateCranes(copy);
+          }}
+        >刪除</button>
+      </div>
+    ))}
+  </div>
+
+  {/* --- 新增一列 --- */}
+  <div className="flex gap-2 mt-3">
+    <input
+      placeholder="吊車規格 例：45T"
+      className="border p-2 rounded w-32"
+      value={newEstimateCrane.spec}
+      onChange={(e) =>
+        setNewEstimateCrane({ ...newEstimateCrane, spec: e.target.value })
+      }
+    />
+    <input
+      type="number"
+      placeholder="天"
+      className="border p-2 rounded w-20"
+      value={newEstimateCrane.day}
+      onChange={(e) =>
+        setNewEstimateCrane({ ...newEstimateCrane, day: e.target.value })
+      }
+    />
+    <button
+      className="bg-blue-600 text-white px-3 rounded"
+      onClick={() => {
+        if (!newEstimateCrane.spec || !newEstimateCrane.day) return;
+        setEstimateCranes([
+          ...estimateCranes,
+          { ...newEstimateCrane, day: Number(newEstimateCrane.day) }
+        ]);
+        setNewEstimateCrane({ spec: "", day: "" });
+      }}
+    >
+      新增
+    </button>
+  </div>
+</div>
             <h3 className="text-lg font-bold mt-4">吊車統計</h3>
             {Object.keys(craneStats).length === 0 && <p>無吊車紀錄</p>}
             {Object.entries(craneStats).map(([spec, day]) => (
