@@ -334,7 +334,6 @@ function App() {
         <table className="w-full border">
           <thead className="bg-gray-200">
             <tr>
-              <th className="border px-2 py-1">類型</th>
               <th className="border px-2 py-1">日期</th>
               <th className="border px-2 py-1">外包商</th>
               <th className="border px-2 py-1">外包工</th>
@@ -346,29 +345,47 @@ function App() {
             </tr>
           </thead>
 
-          <tbody>
-            {projectRecords.map(r => (
-              <tr key={r.id}>
-                <td className="border px-2 py-1">{r.type === "labor" ? "工數" : "吊車"}</td>
-                <td className="border px-2 py-1">{r.date}</td>
-                <td className="border px-2 py-1">{r.vendor}</td>
-                <td className="border px-2 py-1">{r.labor || ""}</td>
-                <td className="border px-2 py-1">{r.support || ""}</td>
-                <td className="border px-2 py-1">{r.spec || ""}</td>
-                <td className="border px-2 py-1">{r.type === "crane" ? r.day.toFixed(1) : ""}</td>
-                <td className="border px-2 py-1">{r.note}</td>
+<tbody>
 
-                <td className="border px-2 py-1 no-print">
-                  <button className="text-blue-600 mr-2" onClick={() => startEditRecord(r)}>
-                    編輯
-                  </button>
-                  <button className="text-red-600" onClick={() => deleteRecord(r.id)}>
-                    刪除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+  {/* 每一筆紀錄 */}
+  {projectRecords.map(r => (
+    <tr key={r.id}>
+      <td className="border px-2 py-1">{r.date}</td>
+      <td className="border px-2 py-1">{r.vendor}</td>
+      <td className="border px-2 py-1">{r.labor || ""}</td>
+      <td className="border px-2 py-1">{r.support || ""}</td>
+      <td className="border px-2 py-1">{r.spec || ""}</td>
+      <td className="border px-2 py-1">
+        {r.type === "crane" ? r.day.toFixed(1) : ""}
+      </td>
+      <td className="border px-2 py-1">{r.note}</td>
+
+      <td className="border px-2 py-1 no-print">
+        <button className="text-blue-600 mr-2"
+          onClick={() => startEditRecord(r)}>
+          編輯
+        </button>
+
+        <button className="text-red-600"
+          onClick={() => deleteRecord(r.id)}>
+          刪除
+        </button>
+      </td>
+    </tr>
+  ))}
+
+  {/* 小計列 —— 放在 tbody 最底部才正確 */}
+  <tr className="bg-yellow-100 font-bold text-lg">
+    <td className="border px-2 py-2 text-center" colSpan="2">工數小計</td>
+    <td className="border px-2 py-2 text-blue-700">{totalLabor.toFixed(1)}</td>
+    <td className="border px-2 py-2 text-blue-700">{totalSupport.toFixed(1)}</td>
+    <td className="border px-2 py-2 text-red-700" colSpan="3">
+      合計：{totalLaborSum.toFixed(1)}
+    </td>
+    <td className="border no-print"></td>
+  </tr>
+
+</tbody>
         </table>
       </div>
 
