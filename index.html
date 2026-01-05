@@ -68,7 +68,7 @@ function App() {
     const [syncStatus, setSyncStatus] = React.useState({ loading: false, lastTime: load("lastSyncTime", "尚未同步") });
     const [entryForm, setEntryForm] = React.useState({ date: new Date().toISOString().split('T')[0], labor: 0, support: 0, note: "", machines: [] });
 
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzc7eXQObf5fkZ4iqje4_I4U3avG9fveDJe3UumMuaH5v0uSo8M75w_e_IbdRiuHtqPSg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyiYbHbvMjtMHIBgR19kpcLgVQHbfv329RqxrTK3Qlm94OqBlJ5DDGDEQCu36itTE2sZw/exec";
 
     const currentProject = projects.find(p => p.id === currentProjectId);
     const currentPlans = projectPlans[currentProjectId] || [];
